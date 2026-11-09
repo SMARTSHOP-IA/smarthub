@@ -111,6 +111,20 @@ body.verrou .wrap { display: none; }
 .c-prep { background: #9AA1AD; } .c-cmd { background: var(--yellow); } .c-prod { background: var(--cyan); }
 .c-liv { background: #3BB273; } .c-inc { background: var(--magenta); }
 .charge-vide { color: var(--muted); margin: 0; }
+
+.repartition { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; align-items: center; padding-top: 18px; border-top: 1px solid var(--line); }
+.repartition h3 { grid-column: 1 / -1; margin: 0; font: 500 13px var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.repartition svg { width: 100%; max-width: 220px; height: auto; display: block; }
+.repartition svg path { stroke: var(--surface); stroke-width: 1.5; }
+.repartition svg text { fill: var(--ink); font: 600 22px var(--display); }
+.repartition svg text.sous { fill: var(--muted); font: 500 10px var(--body); letter-spacing: .08em; text-transform: uppercase; }
+.parts { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.parts li { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto auto; gap: 10px; align-items: baseline; font-variant-numeric: tabular-nums; }
+.parts i { width: 12px; height: 12px; border-radius: 3px; align-self: center; }
+.parts .qui { font-weight: 600; }
+.parts .detail { grid-column: 2 / -1; color: var(--muted); font-size: 12.5px; margin-top: -4px; }
+.parts .pct { color: var(--muted); min-width: 3.5em; text-align: right; }
+@media (max-width: 600px) { .repartition { grid-template-columns: 1fr; } .repartition svg { margin: 0 auto; max-width: 180px; } }
 </style>
 </head>
 <body class="verrou">
@@ -155,6 +169,7 @@ body.verrou .wrap { display: none; }
     <span><i class="c-prod"></i>En production</span><span><i class="c-liv"></i>En livraison</span><span><i class="c-inc"></i>Incident</span>
   </div>
   <div id="chargeCorps"><p class="charge-vide">Chargement des commandes en cours…</p></div>
+  <div class="repartition" id="repartition" hidden></div>
 </section>
 <section aria-labelledby="autres">
 <h2 id="autres">Autres services</h2>
@@ -241,9 +256,42 @@ body.verrou .wrap { display: none; }
   }
   // ── Charge de l'équipe : données publiées par la Sentinelle à chaque passage horaire ──
   const NOMS = {"Mon Assurance Facile": "MAF", "Boutique CAFPI": "CAFPI", "SOLIHA Shop": "Soliha",
-                "La Boutique ORPI": "Orpi", "La Boutique LBI": "LBI", "Bulle Production": "Bulle Production"};
+                "La Boutique ORPI": "Orpi", "La Boutique LBI": "LBI", "Boutique Amanda": "Amanda", "Bulle Production": "Bulle Production"};
   const PHASES = [["preparation", "c-prep", "En préparation"], ["a_commander", "c-cmd", "À commander"],
                   ["production", "c-prod", "En production"], ["livraison", "c-liv", "En livraison"], ["incident", "c-inc", "Incident"]];
+  // Camembert : commandes clientes en cours par chargée de prod
+  const COULEURS = ["#1C9DD9", "#E50E7E", "#F2C200", "#3BB273", "#7A5CFA", "#F07B3F", "#2BB8B0", "#B5487F"];
+  function dessinerRepartition(parts) {
+    const zone = document.getElementById("repartition");
+    parts = parts.filter(p => p.commandes > 0);
+    if (!parts.length) { zone.hidden = true; return; }
+    const total = parts.reduce((a, p) => a + p.commandes, 0);
+    let angle = -Math.PI / 2, chemins = "";
+    parts.forEach((p, i) => {
+      const coul = p.nom === "Non attribuée" ? "#B8BDC6" : COULEURS[i % COULEURS.length];
+      p.couleur = coul;
+      const a = 2 * Math.PI * p.commandes / total, fin = angle + a;
+      if (parts.length === 1) {
+        chemins += '<circle cx="100" cy="100" r="90" fill="' + coul + '"></circle>';
+      } else {
+        const x1 = 100 + 90 * Math.cos(angle), y1 = 100 + 90 * Math.sin(angle);
+        const x2 = 100 + 90 * Math.cos(fin), y2 = 100 + 90 * Math.sin(fin);
+        chemins += '<path fill="' + coul + '" d="M100 100 L' + x1.toFixed(2) + " " + y1.toFixed(2) + " A90 90 0 " + (a > Math.PI ? 1 : 0)
+          + " 1 " + x2.toFixed(2) + " " + y2.toFixed(2) + ' Z"><title>' + esc(p.nom) + " : " + p.commandes + "</title></path>";
+      }
+      angle = fin;
+    });
+    const pct = n => Math.round(100 * n / total) + " %";
+    zone.innerHTML = "<h3>Répartition par chargée de prod</h3>"
+      + '<svg viewBox="0 0 200 200" role="img" aria-label="Répartition des ' + total + ' commandes en cours par chargée de prod">' + chemins
+      + '<circle cx="100" cy="100" r="46" fill="var(--surface)"></circle><text x="100" y="103" text-anchor="middle">' + total
+      + '</text><text class="sous" x="100" y="120" text-anchor="middle">commandes</text></svg>'
+      + '<ul class="parts">' + parts.map(p => '<li><i style="background:' + p.couleur + '"></i><span class="qui">' + esc(p.nom)
+        + "</span><span>" + p.commandes + '</span><span class="pct">' + pct(p.commandes) + '</span><span class="detail">'
+        + Object.entries(p.par_client || {}).sort((a, b) => b[1] - a[1]).map(([c, n]) => esc(NOMS[c] || c) + " " + n).join(" · ")
+        + "</span></li>").join("") + "</ul>";
+    zone.hidden = false;
+  }
   let arretCharge = null;
   function chargerCharge() {
     if (arretCharge) return;
@@ -265,6 +313,7 @@ body.verrou .wrap { display: none; }
         return "<tr><td class=\"client\">" + esc(NOMS[t.nom] || t.nom) + "</td>" + PHASES.map(([k]) => cell(c[k] || 0)).join("")
           + cell(c.en_retard || 0, "retard") + '<td class="total">' + total + "</td><td>" + barre + "</td></tr>";
       }).join("");
+      dessinerRepartition(K.par_chargee || []);
       corps.innerHTML = '<div class="tableau-charge"><table><thead><tr><th>Client</th>' + PHASES.map(([, , l]) => "<th>" + l + "</th>").join("")
         + "<th>En retard</th><th>Commandes en cours</th><th><span class=\"sr\"></span></th></tr></thead><tbody>" + rows
         + '<tr class="somme"><td>Total</td>' + PHASES.map(([k]) => cell(somme[k])).join("") + cell(somme.en_retard, "retard")
