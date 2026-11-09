@@ -185,10 +185,13 @@ body.verrou .wrap { display: none; }
     montrer("<h1>Les outils de l'équipe</h1><p>Réservé à l'équipe Smartshop. Connectez-vous avec votre compte Google professionnel.</p>"
       + (msg ? '<p class="gerr">' + esc(msg) + "</p>" : "") + '<button class="gbtn" id="gLogin">Se connecter avec Google</button>');
     document.getElementById("gLogin").onclick = async () => {
-      try { const p = new firebase.auth.GoogleAuthProvider(); p.setCustomParameters({hd: "smartshop.fr", prompt: "select_account"});
-            await auth.signInWithPopup(p); }
-      catch (e) { if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request")
-        connexion("La connexion a échoué (" + (e.code || e.message) + ")."); }
+      try { await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+      catch (e) {
+        console.error("Connexion Google", e);
+        if (e.code === "auth/popup-closed-by-user" || e.code === "auth/cancelled-popup-request")
+          connexion("La fenêtre Google s'est fermée avant la fin de la connexion (" + e.code + "). Réessayez ; si cela se reproduit, autorisez les fenêtres pop-up pour ce site.");
+        else connexion("La connexion a échoué (" + (e.code || e.message) + ").");
+      }
     };
   }
   function refuse(u) {
