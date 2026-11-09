@@ -87,6 +87,30 @@ body.verrou .wrap { display: none; }
 .gbtn:focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
 .user-chip { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
 .user-chip button { font: 500 13px var(--body); background: none; border: none; color: var(--ink); text-decoration: underline; cursor: pointer; padding: 0; }
+
+/* Charge de l'équipe par client */
+.charge { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px 22px 18px; display: grid; gap: 16px; }
+.charge-tete { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; }
+.charge-tete h2 { margin: 0; }
+.charge-maj { font-size: 12.5px; color: var(--muted); }
+.legende { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--muted); }
+.legende span { display: inline-flex; align-items: center; gap: 6px; }
+.legende i, .barre i { display: block; }
+.legende i { width: 10px; height: 10px; border-radius: 3px; }
+.tableau-charge { overflow-x: auto; }
+.tableau-charge table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 640px; }
+.tableau-charge th { font: 500 11.5px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); text-align: right; padding: 0 8px 8px; white-space: nowrap; }
+.tableau-charge th:first-child, .tableau-charge td:first-child { text-align: left; padding-left: 0; }
+.tableau-charge td { padding: 10px 8px; border-top: 1px solid var(--line); text-align: right; }
+.tableau-charge td.client { font-family: var(--display); font-weight: 600; }
+.tableau-charge td.total { font-weight: 600; }
+.tableau-charge td.zero { color: var(--muted); opacity: .55; }
+.tableau-charge tr.somme td { font-weight: 600; border-top: 2px solid var(--ink); }
+.retard { color: var(--magenta); font-weight: 600; }
+.barre { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--hover); min-width: 90px; }
+.c-prep { background: #9AA1AD; } .c-cmd { background: var(--yellow); } .c-prod { background: var(--cyan); }
+.c-liv { background: #3BB273; } .c-inc { background: var(--magenta); }
+.charge-vide { color: var(--muted); margin: 0; }
 </style>
 </head>
 <body class="verrou">
@@ -123,6 +147,14 @@ body.verrou .wrap { display: none; }
   <span class="tool-desc">Envoi des bons à tirer aux clients, suivi des validations et retour automatique dans Monday.</span>
   <span class="tool-url">smartbat.smartshop.fr<span class="arrow" aria-hidden="true">→</span></span>
 </a>
+</section>
+<section class="charge" id="charge" aria-labelledby="charge-titre">
+  <div class="charge-tete"><h2 id="charge-titre">Charge de l'équipe par client</h2><span class="charge-maj" id="chargeMaj"></span></div>
+  <div class="legende" aria-hidden="true">
+    <span><i class="c-prep"></i>En préparation (BAT, attente client)</span><span><i class="c-cmd"></i>À commander</span>
+    <span><i class="c-prod"></i>En production</span><span><i class="c-liv"></i>En livraison</span><span><i class="c-inc"></i>Incident</span>
+  </div>
+  <div id="chargeCorps"><p class="charge-vide">Chargement des commandes en cours…</p></div>
 </section>
 <section aria-labelledby="autres">
 <h2 id="autres">Autres services</h2>
@@ -168,6 +200,7 @@ body.verrou .wrap { display: none; }
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 (function () {
   const firebaseConfig = {apiKey: "AIzaSyDSb3lmftpgG-fRvlkl7YHhTiwA_veN1Ck", authDomain: "smartshop-catalogues.firebaseapp.com",
@@ -204,9 +237,44 @@ body.verrou .wrap { display: none; }
     gate.hidden = true; document.body.classList.remove("verrou");
     chip.innerHTML = "<span>Connecté : " + esc(u.email) + '</span><button id="gOut2">Se déconnecter</button>';
     document.getElementById("gOut2").onclick = () => auth.signOut();
+    chargerCharge();
+  }
+  // ── Charge de l'équipe : données publiées par la Sentinelle à chaque passage horaire ──
+  const NOMS = {"Mon Assurance Facile": "MAF", "Boutique CAFPI": "CAFPI", "SOLIHA Shop": "Soliha",
+                "La Boutique ORPI": "Orpi", "La Boutique LBI": "LBI", "Bulle Production": "Bulle Production"};
+  const PHASES = [["preparation", "c-prep", "En préparation"], ["a_commander", "c-cmd", "À commander"],
+                  ["production", "c-prod", "En production"], ["livraison", "c-liv", "En livraison"], ["incident", "c-inc", "Incident"]];
+  let arretCharge = null;
+  function chargerCharge() {
+    if (arretCharge) return;
+    const corps = document.getElementById("chargeCorps"), maj = document.getElementById("chargeMaj");
+    arretCharge = firebase.firestore().collection("sentinelle").doc("etat").onSnapshot(doc => {
+      let K = null;
+      try { K = JSON.parse(doc.data().json).status.commandes; } catch (e) { K = null; }
+      const lignes = ((K && K.tableaux) || []).filter(t => t.charge);
+      if (!lignes.length) { corps.innerHTML = '<p class="charge-vide">Le détail par client arrive au prochain passage de la Sentinelle (toutes les heures en journée).</p>'; maj.textContent = ""; return; }
+      const d = K.verifie_le ? new Date(K.verifie_le) : null;
+      maj.textContent = d ? "Mis à jour le " + d.toLocaleDateString("fr-FR", {day: "numeric", month: "short"}) + " à " + d.toLocaleTimeString("fr-FR", {hour: "2-digit", minute: "2-digit"}) : "";
+      lignes.sort((a, b) => (b.commandes || 0) - (a.commandes || 0));
+      const somme = {commandes: 0, en_retard: 0}; PHASES.forEach(([k]) => somme[k] = 0);
+      const cell = (n, cls) => '<td class="' + (n ? (cls || "") : "zero") + '">' + n + "</td>";
+      const rows = lignes.map(t => {
+        const c = t.charge, total = t.commandes || 0;
+        somme.commandes += total; somme.en_retard += c.en_retard || 0; PHASES.forEach(([k]) => somme[k] += c[k] || 0);
+        const barre = '<div class="barre" title="' + total + ' commandes">' + PHASES.map(([k, cl]) => c[k] ? '<i class="' + cl + '" style="width:' + (100 * c[k] / Math.max(total, 1)) + '%"></i>' : "").join("") + "</div>";
+        return "<tr><td class=\"client\">" + esc(NOMS[t.nom] || t.nom) + "</td>" + PHASES.map(([k]) => cell(c[k] || 0)).join("")
+          + cell(c.en_retard || 0, "retard") + '<td class="total">' + total + "</td><td>" + barre + "</td></tr>";
+      }).join("");
+      corps.innerHTML = '<div class="tableau-charge"><table><thead><tr><th>Client</th>' + PHASES.map(([, , l]) => "<th>" + l + "</th>").join("")
+        + "<th>En retard</th><th>Commandes en cours</th><th><span class=\"sr\"></span></th></tr></thead><tbody>" + rows
+        + '<tr class="somme"><td>Total</td>' + PHASES.map(([k]) => cell(somme[k])).join("") + cell(somme.en_retard, "retard")
+        + "<td>" + somme.commandes + "</td><td></td></tr></tbody></table></div>";
+    }, e => {
+      corps.innerHTML = '<p class="charge-vide">Charge indisponible (' + esc(e.code || e.message) + ").</p>";
+    });
   }
   auth.onAuthStateChanged(u => {
-    if (!u) return connexion();
+    if (!u) { if (arretCharge) { arretCharge(); arretCharge = null; } return connexion(); }
     const ok = u.emailVerified && /@smartshop\.fr$/i.test(u.email || "");
     ok ? ouvrir(u) : refuse(u);
   });
