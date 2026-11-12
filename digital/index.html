@@ -823,12 +823,13 @@ body.verrou .wrap { display: none; }
   const lusRef = () => JOURNAL().collection("lus").doc(state.me.email.toLowerCase());
   const nonLus = () => notif.items.filter(e => e.par !== state.me.email && (!notif.vu || e.le > notif.vu));
   function texteEv(e) {
-    const qui_ = h("b", null, e.par === state.me.email ? "Toi" : (e.parNom || prenom(e.par)));
+    const moi = e.par === state.me.email;
+    const qui_ = h("b", null, moi ? "Tu" : (e.parNom || prenom(e.par))), a = moi ? " as " : " a ";
     const nom = h("b", null, "« " + (e.projetNom || "un projet") + " »");
-    if (e.type === "creation") return [qui_, " a créé le projet ", nom];
-    if (e.type === "statut") return [qui_, " a passé ", nom, " de ", (ST[e.de] || {}).l || e.de, " à ", h("b", null, (ST[e.a] || {}).l || e.a)];
-    if (e.type === "document") return [qui_, " a ajouté ", h("b", null, e.document || "un document"), " à ", nom];
-    return [qui_, " a modifié ", nom];
+    if (e.type === "creation") return [qui_, a + "créé le projet ", nom];
+    if (e.type === "statut") return [qui_, a + "passé ", nom, " de ", (ST[e.de] || {}).l || e.de, " à ", h("b", null, (ST[e.a] || {}).l || e.a)];
+    if (e.type === "document") return [qui_, a + "ajouté ", h("b", null, e.document || "un document"), " à ", nom];
+    return [qui_, a + "modifié ", nom];
   }
   function renderBell() {
     const n = nonLus().length, b = $("#bell-badge");
