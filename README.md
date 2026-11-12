@@ -15,35 +15,21 @@ Suivi des projets de développement : https://smarthub.smartshop.fr/digital/
 Projets, statut, priorité, avancement, échéance, tags (Smartshop, Visibag, Azzurément Immo, Terra Group),
 notes et documents. Connexion Google @smartshop.fr, comme le portail.
 
-Données dans Firebase (projet `smartshop-catalogues`) :
-- Firestore : collection `digital_projets`, avec les sous-collections `notes` et `documents` ;
-- Storage : dossier `digital/<id du projet>/` pour les fichiers joints (25 Mo max).
+Données dans Firebase (projet `smartshop-catalogues`) : Firestore, collection `digital_projets`, avec les
+sous-collections `notes` et `documents`. Les documents sont des liens (Google Drive, GitHub…) : Firebase Storage
+n'est pas activé sur le projet (il demande le forfait Blaze). Le code d'envoi de fichiers est prêt et se réactive
+en rechargeant `firebase-storage-compat.js` si Storage est activé un jour (dossier `digital/<id du projet>/`).
 
-### Règles d'accès à ajouter dans la console Firebase
+### Règle d'accès (publiée le 12/11/2026)
 
-Firestore (Firestore Database > Règles), à l'intérieur de `match /databases/{database}/documents { … }` :
+Dans Firestore > Règles, avant les deux dernières accolades fermantes :
 
 ```
 match /digital_projets/{document=**} {
-  allow read, write: if request.auth != null
-    && request.auth.token.email_verified == true
-    && request.auth.token.email.matches('.*@smartshop[.]fr$');
+  allow read, write: if request.auth != null && request.auth.token.email_verified == true
+                     && request.auth.token.email.lower().matches('.*@smartshop[.]fr$');
 }
 ```
 
-Storage (Storage > Règles), à l'intérieur de `match /b/{bucket}/o { … }` :
-
-```
-match /digital/{allPaths=**} {
-  allow read, delete: if request.auth != null
-    && request.auth.token.email_verified == true
-    && request.auth.token.email.matches('.*@smartshop[.]fr$');
-  allow create, update: if request.auth != null
-    && request.auth.token.email_verified == true
-    && request.auth.token.email.matches('.*@smartshop[.]fr$')
-    && request.resource.size < 25 * 1024 * 1024;
-}
-```
-
-Tant que ces règles ne sont pas publiées, la page affiche « Accès Firebase à ouvrir ».
+Sans cette règle, la page affiche « Accès Firebase à ouvrir ».
 À la première ouverture, le bouton « Importer les 11 projets de départ » remplit la liste.

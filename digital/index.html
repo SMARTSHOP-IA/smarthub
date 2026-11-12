@@ -265,7 +265,6 @@ body.verrou .wrap { display: none; }
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script>
 (function () {
   "use strict";
@@ -629,7 +628,7 @@ body.verrou .wrap { display: none; }
         h("div", { class: "add-form" }, noteTa, h("div", { class: "actions" }, noteBtn)), notesList),
       h("section", { class: "sec" }, h("h2", null, "Documents et liens"),
         h("div", { class: "add-form" },
-          h("div", { class: "actions", style: "justify-content:flex-start" }, fileBtn, fileIn, h("span", { class: "hint" }, "Tous formats, 25 Mo max par fichier.")),
+          storage ? h("div", { class: "actions", style: "justify-content:flex-start" }, fileBtn, fileIn, h("span", { class: "hint" }, "Tous formats, 25 Mo max par fichier.")) : h("p", { class: "hint" }, "Pour joindre un fichier (Word, Excel, PDF…), dépose-le sur Google Drive et colle son lien ci-dessous."),
           h("div", { class: "link-form" }, linkName, linkUrl, linkBtn)),
         docsList),
       dz]);
@@ -810,7 +809,7 @@ body.verrou .wrap { display: none; }
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   fs = firebase.firestore();
-  try { storage = firebase.storage(); } catch (_) { storage = null; }
+  try { storage = typeof firebase.storage === "function" ? firebase.storage() : null; } catch (_) { storage = null; }
   function connexion(msg) {
     montrer("<h1>Digital</h1><p>Suivi des projets de développement, réservé à l'équipe Smartshop. Connectez-vous avec votre compte Google professionnel.</p>"
       + (msg ? '<p class="gerr">' + esc(msg) + "</p>" : "") + '<button class="gbtn" id="gLogin">Se connecter avec Google</button>');
