@@ -14,7 +14,7 @@
 [hidden]{display:none!important}
 img{max-width:100%}
 
-/* Layout : un en-tête au logo, quatre grandes cartes pictogrammes, une rangée compacte pour les autres services. */
+/* Layout : un en-tête au logo, cinq grandes cartes pictogrammes, une rangée compacte pour les autres services. */
 :root {
   --bg: #F6F7F9; --surface: #FFFFFF; --ink: #111214; --muted: #5E6470; --line: #E3E6EB;
   --magenta: #E50E7E; --yellow: #F2D600; --cyan: #1C9DD9; --hover: #F0F2F5;
@@ -38,8 +38,8 @@ h1 { font-family: var(--display); font-weight: 500; font-size: clamp(26px, 4vw, 
 .lead { margin: 0; color: var(--muted); max-width: 60ch; }
 .cmyk { display: inline-flex; gap: 5px; vertical-align: middle; margin-left: 6px; }
 .cmyk i { width: 8px; height: 8px; border-radius: 50%; display: block; }
-.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-.tool { display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px; padding: 24px 22px 20px; background: var(--surface);
+.grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+.tool { display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px; padding: 22px 18px 18px; background: var(--surface);
   border: 1px solid var(--line); border-radius: 14px; color: inherit; text-decoration: none;
   transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
 .tool:hover { transform: translateY(-3px); border-color: var(--ink); box-shadow: 0 10px 24px -16px rgba(0,0,0,.35); }
@@ -66,6 +66,7 @@ h2 { font-family: var(--display); font-weight: 500; font-size: 13px; letter-spac
 .mini-name { font-family: var(--display); font-weight: 600; font-size: 16px; }
 .mini-desc { color: var(--muted); font-size: 13px; }
 footer { display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+@media (max-width: 1100px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 960px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 720px) { .minis, .minis.two { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } .wrap { padding-block: 28px 40px; gap: 32px; } }
@@ -160,6 +161,12 @@ body.verrou .wrap { display: none; }
   <span class="tool-name">BAT</span>
   <span class="tool-desc">Envoi des bons à tirer aux clients, suivi des validations et retour automatique dans Monday.</span>
   <span class="tool-url">smartbat.smartshop.fr<span class="arrow" aria-hidden="true">→</span></span>
+</a>
+<a class="tool" href="/digital/">
+  <span class="pict"><svg viewBox="0 0 60 60" aria-hidden="true"><rect x="7" y="12" width="46" height="34" rx="4"/><path d="M7 20h46"/><path d="M24 28l-6 5 6 5M36 28l6 5-6 5"/><path d="M22 52h16M30 46v6"/><path class="spk" d="M51 2 Q51 7 56 7 Q51 7 51 12 Q51 7 46 7 Q51 7 51 2Z" fill="var(--cyan)"/><path class="spk" d="M6 46 Q6 50 10 50 Q6 50 6 54 Q6 50 2 50 Q6 50 6 46Z" fill="var(--yellow)"/></svg></span>
+  <span class="tool-name">Digital</span>
+  <span class="tool-desc">Suivi des projets de développement : avancement, échéances, priorités, notes et documents.</span>
+  <span class="tool-url">smarthub.smartshop.fr/digital<span class="arrow" aria-hidden="true">→</span></span>
 </a>
 </section>
 <section class="charge" id="charge" aria-labelledby="charge-titre">
