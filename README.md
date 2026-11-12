@@ -16,7 +16,8 @@ Projets, statut, priorité, avancement, échéance, tags (Smartshop, Visibag, Az
 notes et documents. Connexion Google @smartshop.fr, comme le portail.
 
 Données dans Firebase (projet `smartshop-catalogues`) : Firestore, collection `digital_projets`, avec les
-sous-collections `notes` et `documents`. Les documents sont des liens (Google Drive, GitHub…) : Firebase Storage
+sous-collections `notes` et `documents`. Notifications (nouveau projet, changement de statut, document ajouté) :
+`digital_projets/_journal/evenements`, et ce que chacun a déjà vu dans `digital_projets/_journal/lus/<email>`. Les documents sont des liens (Google Drive, GitHub…) : Firebase Storage
 n'est pas activé sur le projet (il demande le forfait Blaze). Le code d'envoi de fichiers est prêt et se réactive
 en rechargeant `firebase-storage-compat.js` si Storage est activé un jour (dossier `digital/<id du projet>/`).
 
