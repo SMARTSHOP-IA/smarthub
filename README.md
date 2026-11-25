@@ -2,7 +2,7 @@
 
 Portail des outils Smartshop, publié sur GitHub Pages : **https://smarthub.smartshop.fr**
 
-`index.html` : un lien vers chaque outil (Sentinelle, Analyse clients, Smartform, BAT, Digital, Facturation,
+`index.html` : un lien vers chaque outil (Sentinelle, Analyse clients, Smartform, BAT, Digital, Stock John Taylor, Facturation,
 Designer, Willow, Monday, Sellsy). Elle ne contient aucune donnée ; chaque outil garde sa propre connexion
 Google @smartshop.fr.
 
@@ -34,3 +34,39 @@ match /digital_projets/{document=**} {
 
 Sans cette règle, la page affiche « Accès Firebase à ouvrir ».
 À la première ouverture, le bouton « Importer les 11 projets de départ » remplit la liste.
+
+## Stock John Taylor (`stock-jt/index.html`)
+
+Suivi des goodies en stock du réseau John Taylor : https://smarthub.smartshop.fr/stock-jt/
+
+Achats du siège (ils créent le stock), commandes des agences (elles le diminuent), stock restant, rétrocession
+par trimestre avec l'état des factures, base des agences et entités de facturation, contrôles automatiques
+(commande non facturée, facture impayée, stock négatif, produit à identifier…). Les montants sont les lignes
+de produits hors taxes, hors frais de port. Saisie manuelle des commandes hors site avec le numéro de devis Sellsy.
+
+La page ne contient aucune donnée. Elles sont dans Firebase (projet `smartshop-catalogues`), Firestore,
+`stock_jt/base/<collection>` : `articles`, `achats`, `commandes`, `entites`, `inventaires`, `versements`.
+Les accès externes sont dans `stock_jt_acces/<e-mail>` et se gèrent depuis l'onglet Réglages.
+L'historique se charge depuis Réglages > Importer (fichier produit par le dépôt privé `stock-john-taylor`).
+
+`/stock-jt/?local=1` ouvre un mode essai sans connexion : les données restent dans le navigateur.
+
+### Règles d'accès
+
+Dans Firestore > Règles, avant les deux dernières accolades fermantes :
+
+```
+match /stock_jt/{document=**} {
+  allow read, write: if request.auth != null && request.auth.token.email_verified == true
+    && (request.auth.token.email.lower().matches('.*@smartshop[.]fr$')
+        || exists(/databases/$(database)/documents/stock_jt_acces/$(request.auth.token.email.lower())));
+}
+match /stock_jt_acces/{email} {
+  allow read: if request.auth != null && request.auth.token.email_verified == true
+    && (request.auth.token.email.lower().matches('.*@smartshop[.]fr$') || request.auth.token.email.lower() == email);
+  allow write: if request.auth != null && request.auth.token.email_verified == true
+    && request.auth.token.email.lower().matches('.*@smartshop[.]fr$');
+}
+```
+
+Sans ces règles, la page affiche « Accès Firebase à ouvrir ».
