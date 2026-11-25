@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Stock John Taylor · Smarthub</title>
+<link rel="icon" type="image/png" href="/brand/smartshop-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600&family=Figtree:wght@400;500;600&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+
+/* Même charte que le Smarthub et Digital. Un en-tête, des onglets, une vue ; les fiches s'ouvrent dans un panneau latéral. */
+:root {
+  --bg: #F6F7F9; --surface: #FFFFFF; --ink: #111214; --muted: #5E6470; --line: #E3E6EB;
+  --magenta: #E50E7E; --yellow: #F2D600; --cyan: #1C9DD9; --hover: #F0F2F5; --green: #2E9E63; --warn: #C27A00;
+  --display: "Lexend", "Avenir Next", "Segoe UI", sans-serif;
+  --body: "Figtree", "Helvetica Neue", Arial, sans-serif;
+  --logo-filter: none;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0F1114; --surface: #171A1F; --ink: #F1F2F4; --muted: #9AA1AD; --line: #2A2F37; --hover: #1E2228;
+  --yellow: #F9EB1E; --magenta: #FF4FA3; --green: #4CC38A; --warn: #F2C200; --logo-filter: invert(1) hue-rotate(180deg); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0F1114; --surface: #171A1F; --ink: #F1F2F4; --muted: #9AA1AD; --line: #2A2F37; --hover: #1E2228;
+  --yellow: #F9EB1E; --magenta: #FF4FA3; --green: #4CC38A; --warn: #F2C200; --logo-filter: invert(1) hue-rotate(180deg); color-scheme: dark; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 40px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 24px; }
+header { display: grid; gap: 18px; }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.logo { width: min(220px, 60vw); height: auto; filter: var(--logo-filter); display: block; }
+.retour { font-size: 13.5px; color: var(--muted); text-decoration: none; }
+.retour:hover { color: var(--ink); text-decoration: underline; }
+h1 { font-family: var(--display); font-weight: 500; font-size: clamp(26px, 4vw, 36px); line-height: 1.15; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.lead { margin: 0; color: var(--muted); max-width: 68ch; }
+.cmyk { display: inline-flex; gap: 5px; vertical-align: middle; margin-left: 6px; }
+.cmyk i { width: 8px; height: 8px; border-radius: 50%; display: block; }
+h2 { font-family: var(--display); font-weight: 500; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0; }
+h3 { font-family: var(--display); font-weight: 600; font-size: 17px; margin: 0; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.user-chip { display: inline-flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); }
+.user-chip button { border: 0; background: none; color: var(--muted); text-decoration: underline; padding: 0; }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; font: 600 14px var(--body); padding: 9px 14px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink); text-decoration: none; }
+.btn:hover { border-color: var(--ink); }
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn.danger { color: var(--magenta); }
+.btn.small { padding: 5px 10px; font-size: 13px; border-radius: 8px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.icon-btn { border: 1px solid transparent; background: none; border-radius: 8px; width: 30px; height: 30px; display: inline-grid; place-items: center; color: var(--muted); }
+.icon-btn:hover { background: var(--hover); color: var(--ink); }
+
+/* Onglets */
+.tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--line); padding-bottom: 0; }
+.tabs button { border: 0; background: none; padding: 10px 14px; font: 600 14px var(--body); color: var(--muted); white-space: nowrap;
+  border-bottom: 3px solid transparent; margin-bottom: -1px; display: inline-flex; gap: 6px; align-items: center; }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--magenta); }
+.pill { font: 600 11.5px var(--display); background: var(--magenta); color: #fff; border-radius: 99px; padding: 1px 7px; }
+.pill.zero { background: var(--hover); color: var(--muted); }
+
+/* Résumé */
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.stat { display: grid; gap: 2px; text-align: left; padding: 16px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+button.stat { transition: border-color .18s ease, transform .18s ease; }
+button.stat:hover { border-color: var(--ink); transform: translateY(-2px); }
+.stat .v { font-family: var(--display); font-weight: 600; font-size: 26px; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.stat .l { color: var(--muted); font-size: 13px; }
+.stat.alerte .v { color: var(--magenta); } .stat.ok .v { color: var(--green); }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.bloc { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+
+/* Filtres */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.toolbar input[type=search], .toolbar select { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-height: 38px; }
+.toolbar input[type=search] { flex: 1 1 220px; min-width: 0; }
+.toolbar .spacer { flex: 1; }
+
+.banner { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 12px 16px; color: var(--muted); }
+.banner.alerte { border-color: var(--magenta); color: var(--ink); }
+.banner.alerte b { color: var(--magenta); }
+.banner pre { white-space: pre-wrap; background: var(--hover); border-radius: 8px; padding: 10px 12px; font-size: 12.5px; color: var(--ink); overflow-x: auto; }
+
+/* Tableaux */
+.scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th { font: 500 11.5px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--surface); position: sticky; top: 0; }
+td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+tbody tr.clic { cursor: pointer; }
+tbody tr.clic:hover { background: var(--hover); }
+tfoot td { font-weight: 600; border-top: 2px solid var(--line); border-bottom: 0; }
+td .sub { color: var(--muted); font-size: 12.5px; display: block; }
+.neg { color: var(--magenta); font-weight: 600; }
+.bas { color: var(--warn); font-weight: 600; }
+.etat { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.etat::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--c, var(--muted)); }
+.tag { display: inline-flex; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.tag.alerte { border-color: var(--magenta); color: var(--magenta); }
+.empty { display: grid; gap: 12px; justify-items: center; text-align: center; padding: 48px 16px; color: var(--muted);
+  background: var(--surface); border: 1px dashed var(--line); border-radius: 14px; }
+.empty strong { color: var(--ink); font-family: var(--display); font-weight: 600; font-size: 18px; }
+.barre { height: 8px; background: var(--hover); border-radius: 4px; overflow: hidden; min-width: 70px; }
+.barre i { display: block; height: 100%; background: var(--cyan); }
+
+/* Panneau */
+.scrim { position: fixed; inset: 0; background: rgba(10, 12, 16, .4); z-index: 20; }
+.panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(680px, 100%); z-index: 21; background: var(--surface);
+  border-left: 1px solid var(--line); box-shadow: -16px 0 40px -20px rgba(0,0,0,.4); display: flex; flex-direction: column; }
+.panel-h { display: flex; align-items: flex-start; gap: 8px; padding: 18px 20px 12px; border-bottom: 1px solid var(--line); }
+.panel-h h3 { flex: 1; font-size: 19px; }
+.panel-body { flex: 1; overflow-y: auto; padding: 16px 20px 24px; display: grid; gap: 20px; align-content: start; }
+.panel-f { display: flex; gap: 8px; justify-content: flex-end; padding: 12px 20px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+.field { display: grid; gap: 5px; min-width: 0; }
+.field.full { grid-column: 1 / -1; }
+.field > label, .field > .lbl { font: 500 11.5px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.field input, .field select, .field textarea, td input, td select {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0; }
+.field textarea { min-height: 70px; resize: vertical; }
+.check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.check input { width: 18px; height: 18px; accent-color: var(--magenta); }
+.lignes td { padding: 5px 6px; border: 0; }
+.lignes td input, .lignes td select { padding: 6px 8px; }
+.lignes input.n { text-align: right; width: 84px; }
+.toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 40; background: var(--ink); color: var(--bg);
+  padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 14px; max-width: 92vw; }
+
+/* Connexion */
+body.verrou .wrap { display: none; }
+.gate { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
+.gate-card { width: min(420px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 32px 28px; display: grid; gap: 16px; }
+.gate-card img { width: 200px; filter: var(--logo-filter); }
+.gate-card h1 { font-size: 22px; }
+.gate-card p { margin: 0; color: var(--muted); }
+.gerr { color: var(--magenta) !important; }
+.gbtn { font: 600 15px var(--body); padding: 12px 16px; border-radius: 10px; border: 1px solid var(--ink); background: var(--ink); color: var(--bg); cursor: pointer; }
+.gbtn.secondaire { background: transparent; color: var(--ink); }
+
+@media (max-width: 860px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .grid2 { grid-template-columns: 1fr; } }
+@media (max-width: 520px) { .fields { grid-template-columns: 1fr; } .wrap { padding-block: 24px 40px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media print { .tabs, .toolbar, .top-right, .user-chip, .btn { display: none !important; } body { background: #fff; } }
+</style>
+</head>
+<body class="verrou">
+<div class="gate" id="gate"><div class="gate-card"><p>Chargement…</p></div></div>
+<div class="wrap">
+<header>
+  <div class="top">
+    <a href="/" aria-label="Retour au Smarthub"><img class="logo" src="/brand/smartshop-logo.png" alt="smartshop"></a>
+    <div class="top-right"><a class="retour" href="/">← Tous les outils</a></div>
+  </div>
+  <div class="top">
+    <div style="display:grid;gap:6px">
+      <h1>Stock John Taylor<span class="cmyk" aria-hidden="true"><i style="background:var(--magenta)"></i><i style="background:var(--yellow)"></i><i style="background:var(--cyan)"></i></span></h1>
+      <p class="lead">Goodies en stock du réseau John Taylor : achats du siège, commandes des agences, stock restant et rétrocession à reverser, au même endroit.</p>
+    </div>
+    <span class="user-chip" id="userChip"></span>
+  </div>
+</header>
+<div id="notice"></div>
+<nav class="tabs" id="tabs" role="tablist" aria-label="Sections"></nav>
+<main id="vue" style="display:grid;gap:18px"></main>
+</div>
+<div id="overlay"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+(function () {
+  "use strict";
+  const firebaseConfig = {apiKey: "AIzaSyDSb3lmftpgG-fRvlkl7YHhTiwA_veN1Ck", authDomain: "smartshop-catalogues.firebaseapp.com",
+    projectId: "smartshop-catalogues", storageBucket: "smartshop-catalogues.firebasestorage.app",
+    messagingSenderId: "161620663653", appId: "1:161620663653:web:8a89f06f89597b57d9d58c"};
+  // Données : Firestore, stock_jt/base/<collection>. Accès externes : stock_jt_acces/<e-mail>.
+  const COLS = ["articles", "achats", "commandes", "entites", "inventaires", "versements"];
+  const ETATS = ["À facturer", "À régler", "Réglé", "Non rétrocédé", "Annulée", "Inconnu"];
+  const ETAT_C = { "À facturer": "var(--magenta)", "À régler": "var(--warn)", "Réglé": "var(--green)", "Non rétrocédé": "var(--muted)", "Annulée": "var(--muted)", "Inconnu": "var(--cyan)" };
+  const SOURCES = ["Nouveau site", "Ancien site", "Hors site"];
+  const FACTURE_SUR = ["JT SA (siège)", "Nom propre (filiale)", "John Taylor Corporate (siège Monaco)"];
+  const JOURS_FACTURE = 30, JOURS_PAIEMENT = 45, SEUIL_BAS = 0.1;
+  // ?local=1 : mode essai, les données restent dans ce navigateur (aucune connexion, rien n'est partagé).
+  const LOCAL = new URLSearchParams(location.search).get("local") === "1";
+
+  const $ = s => document.querySelector(s);
+  function h(tag, props, ...kids) {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(props || {})) {
+      if (v == null || v === false) continue;
+      if (k === "class") e.className = v;
+      else if (k === "style") e.style.cssText = v;
+      else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+      else if (k in e && k !== "list") e[k] = v;
+      else e.setAttribute(k, v === true ? "" : v);
+    }
+    for (const kid of kids.flat(Infinity)) if (kid != null && kid !== false) e.append(kid.nodeType ? kid : String(kid));
+    return e;
+  }
+  const eur = n => (Math.round((n || 0) * 100) / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+  const nb = n => (Math.round((n || 0) * 100) / 100).toLocaleString("fr-FR");
+  const num = v => { const n = parseFloat(String(v ?? "").replace(/\s/g, "").replace(",", ".")); return isFinite(n) ? n : 0; };
+  const r2 = n => Math.round(n * 100) / 100;
+  const dateFr = d => d ? d.split("-").reverse().join("/") : "—";
+  const auj = () => new Date().toISOString().slice(0, 10);
+  const triDe = d => d ? d.slice(0, 4) + "-T" + (Math.floor((+d.slice(5, 7) - 1) / 3) + 1) : "";
+  const triFr = t => t ? t.replace("-", " ") : "Sans trimestre";
+  const finTri = t => { const y = +t.slice(0, 4), q = +t.slice(6); return new Date(Date.UTC(y, q * 3, 0)).toISOString().slice(0, 10); };
+  const joursDepuis = d => d ? Math.floor((Date.now() - Date.parse(d)) / 864e5) : null;
+  const slug = s => String(s).normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+  const uid = p => p + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  let toastT;
+  function toast(msg) { document.querySelector(".toast")?.remove(); const t = h("div", { class: "toast", role: "status" }, msg); document.body.append(t); clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 4200); }
+
+  // ------------------------------------------------------------ Stockage
+  const db = Object.fromEntries(COLS.map(c => [c, []])); db.acces = [];
+  const state = { tab: location.hash.slice(1) || "synthese", me: null, refus: false, loaded: false,
+    cmd: { q: "", tri: "", etat: "", source: "" }, stock: { q: "", cat: "" }, retroTri: null };
+  let fs = null;
+  const store = LOCAL ? {
+    async load() { const d = JSON.parse(localStorage.getItem("stockjt-local") || "{}"); for (const c of [...COLS, "acces"]) db[c] = d[c] || []; },
+    _save() { localStorage.setItem("stockjt-local", JSON.stringify(db)); },
+    async set(col, doc) { const i = db[col].findIndex(x => x.id === doc.id); i < 0 ? db[col].push(doc) : db[col][i] = doc; this._save(); },
+    async del(col, id) { db[col] = db[col].filter(x => x.id !== id); this._save(); },
+    async bulk(col, docs) { for (const d of docs) { const i = db[col].findIndex(x => x.id === d.id); i < 0 ? db[col].push(d) : db[col][i] = d; } this._save(); },
+  } : {
+    ref(col) { return col === "acces" ? fs.collection("stock_jt_acces") : fs.collection("stock_jt").doc("base").collection(col); },
+    async load() {
+      const snaps = await Promise.all([...COLS, "acces"].map(c => this.ref(c).get()));
+      [...COLS, "acces"].forEach((c, i) => db[c] = snaps[i].docs.map(d => ({ ...d.data(), id: d.id })));
+    },
+    async set(col, doc) { const { id, ...data } = doc; await this.ref(col).doc(id).set({ ...data, majPar: state.me.email, majLe: new Date().toISOString() });
+      const i = db[col].findIndex(x => x.id === id); i < 0 ? db[col].push(doc) : db[col][i] = doc; },
+    async del(col, id) { await this.ref(col).doc(id).delete(); db[col] = db[col].filter(x => x.id !== id); },
+    async bulk(col, docs) {
+      for (let i = 0; i < docs.length; i += 400) {
+        const b = fs.batch();
+        for (const d of docs.slice(i, i + 400)) { const { id, ...data } = d; b.set(this.ref(col).doc(id), data); }
+        await b.commit();
+      }
+      for (const d of docs) { const i = db[col].findIndex(x => x.id === d.id); i < 0 ? db[col].push(d) : db[col][i] = d; }
+    },
+  };
+  async function sauver(col, doc, msg) {
+    try { await store.set(col, doc); toast(msg || "Enregistré."); return true; }
+    catch (e) { console.error(e); toast(e.code === "permission-denied" ? "Enregistrement refusé : les règles d'accès Firebase ne sont pas en place." : "Enregistrement impossible (" + (e.code || e.message) + ")."); return false; }
+  }
+  async function supprimer(col, id, msg) {
+    try { await store.del(col, id); toast(msg || "Supprimé."); return true; }
+    catch (e) { console.error(e); toast("Suppression impossible (" + (e.code || e.message) + ")."); return false; }
+  }
+
+  // ------------------------------------------------------------ Calculs
+  // Règles : seuls les articles « en stock » sont suivis. Le stock part des achats du siège et diminue des
+  // commandes des agences (sauf commandes annulées). La rétrocession additionne, par trimestre, les lignes
+  // produits HT (jamais les frais de port) des articles « en stock » et « à rétrocéder ».
+  let C = null;
+  function calculer() {
+    const art = new Map(db.articles.map(a => [a.id, a]));
+    const st = new Map(db.articles.map(a => [a.id, { a, achete: 0, valAchat: 0, vendu: 0, apresAchat: 0, apresVente: 0, inv: null }]));
+    for (const i of db.inventaires) { const s = st.get(i.articleId); if (s && (!s.inv || i.date > s.inv.date)) s.inv = i; }
+    for (const a of db.achats) { const s = st.get(a.articleId); if (!s) continue; s.achete += a.quantite; s.valAchat += a.totalHT;
+      if (s.inv && a.date && a.date > s.inv.date) s.apresAchat += a.quantite; }
+    const tris = new Map();
+    const triDeCmd = c => c.trimestre || triDe(c.date) || "";
+    for (const c of db.commandes) {
+      const annulee = c.etat === "Annulée";
+      c._tri = triDeCmd(c); c._total = 0; c._retro = 0; c._sansArticle = 0;
+      for (const l of c.lignes || []) {
+        c._total += l.totalHT || 0;
+        const a = art.get(l.articleId);
+        if (!a) { c._sansArticle++; continue; }
+        if (!a.enStock || annulee) continue;
+        const s = st.get(a.id); s.vendu += l.quantite || 0;
+        if (s.inv && c.date && c.date > s.inv.date) s.apresVente += l.quantite || 0;
+        if (a.aRetroceder && !c.retroExclue) c._retro += l.totalHT || 0;
+      }
+      if (annulee || c.retroExclue) c._retro = 0;
+      if (c._retro || (!annulee && !c.retroExclue)) {
+        const t = tris.get(c._tri) || { tri: c._tri, total: 0, regle: 0, aRegler: 0, aFacturer: 0, autre: 0, n: 0, verse: 0 };
+        t.total += c._retro; t.n++;
+        t[c.etat === "Réglé" ? "regle" : c.etat === "À régler" ? "aRegler" : c.etat === "À facturer" ? "aFacturer" : "autre"] += c._retro;
+        tris.set(c._tri, t);
+      }
+    }
+    for (const v of db.versements) { const t = tris.get(v.trimestre) || { tri: v.trimestre, total: 0, regle: 0, aRegler: 0, aFacturer: 0, autre: 0, n: 0, verse: 0 }; t.verse += v.montant; tris.set(v.trimestre, t); }
+    const stock = [...st.values()].filter(s => s.a.enStock).map(s => {
+      const theorique = s.achete - s.vendu;
+      const actuel = s.inv ? s.inv.quantite + s.apresAchat - s.apresVente : theorique;
+      const ecart = s.inv ? s.inv.quantite - (theorique - s.apresAchat + s.apresVente) : null;
+      const pmp = s.achete ? s.valAchat / s.achete : 0;
+      return { ...s, theorique, actuel, ecart, pmp, valeur: Math.max(actuel, 0) * pmp };
+    }).sort((x, y) => x.a.nom.localeCompare(y.a.nom, "fr"));
+    const trimestres = [...tris.values()].sort((x, y) => (y.tri || "0").localeCompare(x.tri || "0"));
+    C = { art, stock, trimestres, controles: [] };
+    C.controles = controler();
+    return C;
+  }
+  function controler() {
+    const out = [], add = (type, grave, texte, cible) => out.push({ type, grave, texte, cible });
+    const vus = new Map();
+    for (const c of db.commandes) {
+      const cible = { cmd: c.id }, nom = "Commande " + c.numero;
+      if (vus.has(c.numero)) add("Doublon", true, nom + " est enregistrée deux fois.", cible); vus.set(c.numero, 1);
+      if (c.etat === "Annulée") continue;
+      if (c._sansArticle) add("Produit à identifier", true, nom + " : " + c._sansArticle + " ligne(s) sans article du catalogue, non comptée(s) dans le stock ni la rétrocession.", cible);
+      if (!c._tri) add("Trimestre manquant", true, nom + " n'a ni date ni trimestre : " + eur(c._retro) + " hors des totaux trimestriels.", cible);
+      if (c.etat === "Inconnu") add("État de facture inconnu", false, nom + " (" + eur(c._total) + ") : facture et paiement à renseigner.", cible);
+      const age = joursDepuis(c.date);
+      if (c.etat === "À facturer" && (age == null || age > JOURS_FACTURE)) add("Commande non facturée", true, nom + " (" + eur(c._total) + ") n'est pas facturée" + (age != null ? " depuis " + age + " jours." : "."), cible);
+      if (c.etat === "À régler" && age != null && age > JOURS_PAIEMENT) add("Facture non payée", false, nom + " (" + eur(c._total) + ") : facture " + (c.facture || "") + " à régler depuis " + age + " jours.", cible);
+      if (c.etat !== "À facturer" && c.etat !== "Inconnu" && !c.facture && !c.factureNum && !c.retroExclue) add("Numéro de facture manquant", false, nom + " est marquée « " + c.etat + " » sans numéro de facture.", cible);
+      if (c.ecartSite) add("Écart site / facture", false, nom + " : " + eur(c.ecartSite.site) + " sur le site, " + eur(c.ecartSite.facture) + " facturés. Les lignes suivent la facture.", cible);
+    }
+    for (const s of C.stock) {
+      if (s.actuel < 0) add("Stock négatif", true, s.a.nom + " : " + nb(s.actuel) + " en stock. Il manque un achat du siège, ou une commande est comptée en trop.", { stock: s.a.id });
+      else if (s.ecart) add("Écart d'inventaire", false, s.a.nom + " : " + nb(s.inv.quantite) + " comptés le " + dateFr(s.inv.date) + " pour " + nb(s.inv.quantite - s.ecart) + " attendus (" + (s.ecart > 0 ? "+" : "") + nb(s.ecart) + ").", { stock: s.a.id });
+    }
+    for (const t of C.trimestres) {
+      if (!t.tri) continue;
+      const reste = r2(t.total - t.verse);
+      if (reste > 0.5 && joursDepuis(finTri(t.tri)) > 30) add("Rétrocession à reverser", false, triFr(t.tri) + " : " + eur(reste) + " restent à reverser au siège.", { retro: t.tri });
+    }
+    return out.sort((a, b) => b.grave - a.grave || a.type.localeCompare(b.type, "fr"));
+  }
+
+  // ------------------------------------------------------------ Rendu
+  const TABS = [["synthese", "Synthèse"], ["stock", "Stock"], ["commandes", "Commandes"], ["retro", "Rétrocession"],
+    ["achats", "Achats du siège"], ["catalogue", "Catalogue"], ["agences", "Agences"], ["controles", "Contrôles"], ["reglages", "Réglages"]];
+  function go(tab) { state.tab = tab; history.replaceState(null, "", "#" + tab); render(); window.scrollTo({ top: 0 }); }
+  function render() {
+    calculer();
+    $("#tabs").replaceChildren(...TABS.map(([id, nom]) => h("button", { role: "tab", "aria-selected": String(state.tab === id), onclick: () => go(id) }, nom,
+      id === "controles" ? h("span", { class: "pill" + (C.controles.length ? "" : " zero") }, C.controles.length) : null)));
+    const vues = { synthese: vSynthese, stock: vStock, commandes: vCommandes, retro: vRetro, achats: vAchats, catalogue: vCatalogue, agences: vAgences, controles: vControles, reglages: vReglages };
+    if (!db.articles.length && state.tab !== "reglages") return $("#vue").replaceChildren(h("div", { class: "empty" }, h("strong", null, "L'outil est vide pour l'instant"),
+      "Importez le fichier de départ (historique des commandes, achats du siège, catalogue et agences) depuis les réglages.",
+      h("button", { class: "btn primary", onclick: () => go("reglages") }, "Ouvrir les réglages")));
+    $("#vue").replaceChildren(...[(vues[state.tab] || vSynthese)()].flat());
+  }
+  const table = (tetes, lignes, pied) => h("div", { class: "scroll" }, h("table", null,
+    h("thead", null, h("tr", null, tetes.map(t => h("th", { class: t.startsWith(">") ? "r" : "" }, t.replace(/^>/, ""))))),
+    h("tbody", null, lignes), pied ? h("tfoot", null, pied) : null));
+  const etatEl = e => h("span", { class: "etat", style: "--c:" + (ETAT_C[e] || "var(--muted)") }, e || "Inconnu");
+  const stat = (v, l, cls, onclick) => h(onclick ? "button" : "div", { class: "stat " + (cls || ""), onclick }, h("span", { class: "v" }, v), h("span", { class: "l" }, l));
+
+  function vSynthese() {
+    const valeur = C.stock.reduce((s, x) => s + x.valeur, 0);
+    const reste = C.trimestres.reduce((s, t) => s + (t.total - t.verse), 0);
+    const aRegler = db.commandes.filter(c => c.etat === "À régler").reduce((s, c) => s + c._total, 0);
+    const aFact = db.commandes.filter(c => c.etat === "À facturer");
+    const bas = C.stock.filter(s => s.achete && s.actuel <= s.achete * SEUIL_BAS).sort((a, b) => a.actuel - b.actuel).slice(0, 8);
+    return [
+      h("div", { class: "stats" },
+        stat(eur(valeur), "Valeur du stock restant (prix d'achat siège)", "", () => go("stock")),
+        stat(eur(reste), "Rétrocession restant à reverser", reste > 0.5 ? "alerte" : "ok", () => go("retro")),
+        stat(eur(aRegler), "Factures en attente de règlement", "", () => { state.cmd.etat = "À régler"; go("commandes"); }),
+        stat(String(C.controles.length), "Points à vérifier" + (aFact.length ? ", dont " + aFact.length + " commande(s) non facturée(s)" : ""), C.controles.length ? "alerte" : "ok", () => go("controles"))),
+      h("div", { class: "grid2" },
+        h("section", { class: "bloc" }, h("h2", null, "Derniers trimestres"),
+          table(["Trimestre", ">À rétrocéder", ">Versé", ">Reste dû"], C.trimestres.filter(t => t.tri).slice(0, 6).map(t =>
+            h("tr", { class: "clic", onclick: () => { state.retroTri = t.tri; go("retro"); } }, h("td", null, triFr(t.tri)), h("td", { class: "r" }, eur(t.total)), h("td", { class: "r" }, eur(t.verse)),
+              h("td", { class: "r " + (t.total - t.verse > 0.5 ? "neg" : "") }, eur(t.total - t.verse)))))),
+        h("section", { class: "bloc" }, h("h2", null, "Stocks les plus bas"),
+          bas.length ? table(["Article", ">En stock", ">Acheté"], bas.map(s => h("tr", { class: "clic", onclick: () => { state.stock.q = s.a.nom; go("stock"); } },
+            h("td", null, s.a.nom), h("td", { class: "r " + (s.actuel < 0 ? "neg" : "bas") }, nb(s.actuel)), h("td", { class: "r" }, nb(s.achete)))))
+            : h("p", { class: "muted", style: "margin:0" }, "Aucun article sous " + SEUIL_BAS * 100 + " % de la quantité achetée."))),
+    ];
+  }
+
+  function vStock() {
+    const cats = [...new Set(db.articles.map(a => a.categorie))].sort();
+    const f = state.stock, q = slug(f.q);
+    const rows = C.stock.filter(s => (!f.cat || s.a.categorie === f.cat) && (!q || slug(s.a.nom).includes(q)));
+    const tot = rows.reduce((s, x) => s + x.valeur, 0);
+    return [
+      h("div", { class: "toolbar" },
+        h("input", { type: "search", placeholder: "Chercher un article…", value: f.q, "aria-label": "Chercher un article", oninput: e => { f.q = e.target.value; majTable(); } }),
+        h("select", { "aria-label": "Catégorie", onchange: e => { f.cat = e.target.value; render(); } }, h("option", { value: "" }, "Toutes les catégories"), cats.map(c => h("option", { selected: c === f.cat }, c))),
+        h("button", { class: "btn", onclick: () => exporterCsv("stock-john-taylor.csv", [["Article", "Catégorie", "Acheté par le siège", "Commandé par les agences", "Stock", "Dernier inventaire", "Date inventaire", "Écart", "PU achat moyen", "Valeur"],
+          ...rows.map(s => [s.a.nom, s.a.categorie, s.achete, s.vendu, s.actuel, s.inv ? s.inv.quantite : "", s.inv ? s.inv.date : "", s.ecart ?? "", r2(s.pmp), r2(s.valeur)])]) }, "Exporter")),
+      h("div", { id: "t-stock" }, tStock(rows, tot)),
+      h("p", { class: "muted", style: "margin:0;font-size:13px" }, "Stock = achats du siège − commandes des agences. Après un inventaire, le stock repart de la quantité comptée, plus les achats et moins les commandes datés d'après. La valeur utilise le prix d'achat moyen payé par le siège."),
+    ];
+    function majTable() { const q2 = slug(f.q); const r = C.stock.filter(s => (!f.cat || s.a.categorie === f.cat) && (!q2 || slug(s.a.nom).includes(q2))); $("#t-stock").replaceChildren(tStock(r, r.reduce((s, x) => s + x.valeur, 0))); }
+  }
+  function tStock(rows, tot) {
+    return table(["Article", ">Acheté", ">Commandé", "", ">En stock", ">Inventaire", ">Valeur", ""], rows.map(s => {
+      const pct = s.achete ? Math.max(0, Math.min(100, s.actuel / s.achete * 100)) : 0;
+      return h("tr", null, h("td", null, s.a.nom, h("span", { class: "sub" }, s.a.categorie + (s.a.surNouveauSite ? "" : " · absent du nouveau site"))),
+        h("td", { class: "r" }, nb(s.achete)), h("td", { class: "r" }, nb(s.vendu)),
+        h("td", null, h("div", { class: "barre", title: Math.round(pct) + " % restant" }, h("i", { style: "width:" + pct + "%" + (pct <= SEUIL_BAS * 100 ? ";background:var(--magenta)" : "") }))),
+        h("td", { class: "r " + (s.actuel < 0 ? "neg" : s.achete && s.actuel <= s.achete * SEUIL_BAS ? "bas" : "") }, nb(s.actuel)),
+        h("td", { class: "r" }, s.inv ? [nb(s.inv.quantite), h("span", { class: "sub" }, dateFr(s.inv.date) + (s.ecart ? " · écart " + (s.ecart > 0 ? "+" : "") + nb(s.ecart) : ""))] : h("span", { class: "muted" }, "—")),
+        h("td", { class: "r" }, eur(s.valeur)),
+        h("td", { class: "r" }, h("button", { class: "btn small", onclick: () => pInventaire(s) }, "Compter")));
+    }), h("tr", null, h("td", { colSpan: 6 }, rows.length + " articles"), h("td", { class: "r" }, eur(tot)), h("td")));
+  }
+  function pInventaire(s) {
+    const d = h("input", { type: "date", value: auj() }), q = h("input", { inputMode: "decimal", value: String(Math.max(s.actuel, 0)) });
+    const hist = db.inventaires.filter(i => i.articleId === s.a.id).sort((a, b) => b.date.localeCompare(a.date));
+    panneau("Inventaire · " + s.a.nom, [
+      h("p", { class: "muted", style: "margin:0" }, "Stock attendu aujourd'hui : " + nb(s.actuel) + ". Saisissez la quantité réellement comptée ; le stock repartira de ce chiffre."),
+      h("div", { class: "fields" }, champ("Date du comptage", d), champ("Quantité comptée", q)),
+      hist.length ? h("div", null, h("h2", { style: "margin-bottom:8px" }, "Comptages précédents"), table(["Date", ">Quantité", "Par", ""], hist.map(i => h("tr", null, h("td", null, dateFr(i.date)), h("td", { class: "r" }, nb(i.quantite)), h("td", null, i.par || ""),
+        h("td", { class: "r" }, h("button", { class: "btn small danger", onclick: async () => { if (await supprimer("inventaires", i.id)) { fermer(); render(); } } }, "Supprimer")))))) : null,
+    ], [["Enregistrer le comptage", async () => { if (await sauver("inventaires", { id: uid("inv"), articleId: s.a.id, date: d.value || auj(), quantite: num(q.value), par: state.me.email }, "Inventaire enregistré.")) { fermer(); render(); } }, "primary"]]);
+  }
+
+  function vCommandes() {
+    const f = state.cmd, q = slug(f.q);
+    const tris = [...new Set(db.commandes.map(c => c._tri))].sort().reverse();
+    const rows = db.commandes.filter(c => (!f.tri || c._tri === (f.tri === "aucun" ? "" : f.tri)) && (!f.etat || c.etat === f.etat) && (!f.source || c.source === f.source)
+      && (!q || slug([c.numero, c.agence, c.contact, c.factureA, c.facture, c.ville, (c.lignes || []).map(l => l.libelle).join(" ")].join(" ")).includes(q)))
+      .sort((a, b) => (b._tri || "9").localeCompare(a._tri || "9") || (b.date || "").localeCompare(a.date || ""));
+    const tot = rows.reduce((s, c) => s + c._total, 0), totR = rows.reduce((s, c) => s + c._retro, 0);
+    const sel = (lbl, key, opts) => h("select", { "aria-label": lbl, onchange: e => { f[key] = e.target.value; render(); } }, h("option", { value: "" }, lbl), opts.map(o => h("option", { value: o[0] ?? o, selected: (o[0] ?? o) === f[key] }, o[1] ?? o)));
+    return [
+      h("div", { class: "toolbar" },
+        h("input", { type: "search", placeholder: "N° de commande, agence, facture, produit…", value: f.q, "aria-label": "Chercher une commande", onchange: e => { f.q = e.target.value; render(); } }),
+        sel("Tous les trimestres", "tri", tris.map(t => [t || "aucun", triFr(t)])), sel("Tous les états", "etat", ETATS), sel("Toutes les origines", "source", SOURCES),
+        h("button", { class: "btn", onclick: () => exporterCsv("commandes-john-taylor.csv", [["N°", "Date", "Trimestre", "Origine", "Agence", "Facturé à", "Facture", "État", "Total produits HT", "À rétrocéder", "Détail"],
+          ...rows.map(c => [c.numero, c.date || "", c._tri, c.source, c.agence || "", c.factureA || "", c.facture || c.factureNum || "", c.etat, r2(c._total), r2(c._retro), (c.lignes || []).map(l => l.quantite + " × " + l.libelle).join(" | ")])]) }, "Exporter"),
+        h("button", { class: "btn primary", onclick: () => pCommande(null) }, "+ Commande manuelle")),
+      rows.length ? table(["N°", "Date", "Agence", "Produits", "Facture", "État", ">Produits HT", ">À rétrocéder"], rows.slice(0, 400).map(c =>
+        h("tr", { class: "clic", onclick: () => pCommande(c) },
+          h("td", null, c.numero, h("span", { class: "sub" }, c.source)), h("td", null, dateFr(c.date), h("span", { class: "sub" }, triFr(c._tri))),
+          h("td", null, c.agence || c.ville || "—", h("span", { class: "sub" }, c.factureA || "")),
+          h("td", null, (c.lignes || []).length + " ligne" + ((c.lignes || []).length > 1 ? "s" : ""), c._sansArticle ? h("span", { class: "sub neg" }, c._sansArticle + " à identifier") : null),
+          h("td", null, c.facture || c.factureNum || h("span", { class: "muted" }, "—")), h("td", null, etatEl(c.etat)),
+          h("td", { class: "r" }, eur(c._total)), h("td", { class: "r" }, c.retroExclue ? h("span", { class: "tag" }, "exclue") : eur(c._retro)))),
+        h("tr", null, h("td", { colSpan: 6 }, rows.length + " commandes" + (rows.length > 400 ? " (400 affichées, affinez le filtre)" : "")), h("td", { class: "r" }, eur(tot)), h("td", { class: "r" }, eur(totR))))
+        : h("div", { class: "empty" }, h("strong", null, "Aucune commande ne correspond"), "Modifiez la recherche ou les filtres."),
+    ];
+  }
+  function pCommande(c) {
+    const neuf = !c;
+    const d = c ? JSON.parse(JSON.stringify(c)) : { id: "", numero: "", source: "Hors site", date: auj(), trimestre: "", agence: "", factureA: "", facture: "", etat: "À facturer", retroExclue: false, note: "", lignes: [{ articleId: "", libelle: "", quantite: 0, puht: 0, totalHT: 0 }] };
+    const arts = [...db.articles].sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+    const i = (k, props) => h("input", { value: d[k] ?? "", oninput: e => d[k] = e.target.value, ...props });
+    const s = (k, opts) => h("select", { onchange: e => d[k] = e.target.value }, opts.map(o => h("option", { value: o, selected: o === d[k] }, o)));
+    const factureA = i("factureA", { placeholder: "Entité facturée" });
+    const agence = i("agence", { list: "dl-agences", placeholder: "Agence", onchange: e => { const en = db.entites.find(x => x.agence === e.target.value); if (en && en.entite && !d.factureA) { d.factureA = en.entite; factureA.value = en.entite; } } });
+    const totalEl = h("b", { class: "num" }, "");
+    const tbody = h("tbody");
+    const maj = () => totalEl.textContent = eur(d.lignes.reduce((t, l) => t + (l.totalHT || 0), 0));
+    function ligne(l) {
+      const tot = h("input", { class: "n", inputMode: "decimal", value: l.totalHT || "", "aria-label": "Total HT", oninput: e => { l.totalHT = num(e.target.value); maj(); } });
+      const pu = h("input", { class: "n", inputMode: "decimal", value: l.puht || "", "aria-label": "Prix unitaire HT", oninput: e => { l.puht = num(e.target.value); l.totalHT = r2(l.puht * l.quantite); tot.value = l.totalHT || ""; maj(); } });
+      const qte = h("input", { class: "n", inputMode: "decimal", value: l.quantite || "", "aria-label": "Quantité", oninput: e => { l.quantite = num(e.target.value); l.totalHT = r2(l.puht * l.quantite); tot.value = l.totalHT || ""; maj(); } });
+      const tr = h("tr", null,
+        h("td", null, h("select", { "aria-label": "Article", onchange: e => { l.articleId = e.target.value || null; const a = C.art.get(l.articleId); if (a) { if (!l.libelle || neuf) l.libelle = a.nom; if (!l.puht && a.prixActuel) { l.puht = a.prixActuel; pu.value = l.puht; l.totalHT = r2(l.puht * l.quantite); tot.value = l.totalHT || ""; maj(); } } } },
+          h("option", { value: "" }, l.libelle && !l.articleId ? "À identifier : " + l.libelle.slice(0, 40) : "Choisir un article…"), arts.map(a => h("option", { value: a.id, selected: a.id === l.articleId }, a.nom + (a.enStock ? "" : " (hors stock)")))),
+          l.libelle && l.articleId && l.libelle !== C.art.get(l.articleId)?.nom ? h("span", { class: "sub" }, l.libelle) : null),
+        h("td", null, qte), h("td", null, pu), h("td", null, tot),
+        h("td", null, h("button", { class: "icon-btn", "aria-label": "Retirer la ligne", onclick: () => { d.lignes.splice(d.lignes.indexOf(l), 1); tr.remove(); maj(); } }, "✕")));
+      return tr;
+    }
+    tbody.append(...d.lignes.map(ligne)); maj();
+    const excl = h("input", { type: "checkbox", checked: !!d.retroExclue, onchange: e => d.retroExclue = e.target.checked });
+    panneau(neuf ? "Nouvelle commande manuelle" : "Commande " + c.numero, [
+      c?.ecartSite ? h("div", { class: "banner" }, "Le site indiquait " + eur(c.ecartSite.site) + " et la facture " + eur(c.ecartSite.facture) + " : les lignes ont été ajustées sur la facture.") : null,
+      c?.montantsEstimes ? h("div", { class: "banner" }, "Commande reprise du tableau de gestion : le total est celui de la facture, mais sa répartition par ligne est estimée. Corrigez les lignes si besoin.") : null,
+      h("div", { class: "fields" },
+        champ(neuf ? "N° de devis Sellsy ou de commande" : "N° de commande", i("numero", { placeholder: "ex. D-16671", disabled: !neuf && d.source !== "Hors site" })),
+        champ("Origine", s("source", SOURCES)),
+        champ("Date", i("date", { type: "date" })), champ("Trimestre (si pas de date)", i("trimestre", { placeholder: "ex. 2026-T4" })),
+        champ("Agence", agence), champ("Facturé à", factureA),
+        champ("N° de facture Sellsy", i("facture", { placeholder: "ex. F-20261124-27026" })), champ("État de la facture", s("etat", ETATS)),
+        h("label", { class: "check field full" }, excl, "Ne pas compter dans la rétrocession (ex. convention offerte par le siège)"),
+        h("div", { class: "field full" }, h("label", null, "Note"), h("textarea", { value: d.note || "", oninput: e => d.note = e.target.value }))),
+      h("div", null, h("h2", { style: "margin-bottom:8px" }, "Produits (hors frais de port)"),
+        h("div", { class: "scroll" }, h("table", { class: "lignes" }, h("thead", null, h("tr", null, ["Article", "Quantité", "PU HT", "Total HT", ""].map(t => h("th", null, t)))), tbody,
+          h("tfoot", null, h("tr", null, h("td", { colSpan: 3 }, h("button", { class: "btn small", onclick: () => { const l = { articleId: "", libelle: "", quantite: 0, puht: 0, totalHT: 0 }; d.lignes.push(l); tbody.append(ligne(l)); } }, "+ Ajouter un produit")), h("td", { class: "r" }, totalEl), h("td")))))),
+      h("datalist", { id: "dl-agences" }, db.entites.map(e => h("option", { value: e.agence }))),
+    ], [
+      neuf ? null : ["Supprimer", async () => { if (confirm("Supprimer la commande " + c.numero + " ? Elle ne comptera plus dans le stock ni la rétrocession.") && await supprimer("commandes", c.id, "Commande supprimée.")) { fermer(); render(); } }, "danger"],
+      ["Enregistrer", async () => {
+        d.numero = String(d.numero).trim();
+        if (!d.numero) return toast("Indiquez le numéro de devis Sellsy ou de commande.");
+        d.lignes = d.lignes.filter(l => l.articleId || l.libelle || l.quantite);
+        if (!d.lignes.length) return toast("Ajoutez au moins un produit.");
+        if (neuf) { d.id = slug(d.numero) || uid("cmd"); if (db.commandes.some(x => x.id === d.id)) return toast("Une commande porte déjà ce numéro."); d.saisiePar = state.me.email; }
+        for (const k of Object.keys(d)) if (k.startsWith("_")) delete d[k];
+        d.totalHT = r2(d.lignes.reduce((t, l) => t + (l.totalHT || 0), 0)); delete d.aCompleter; if (!neuf) delete d.montantsEstimes;
+        if (await sauver("commandes", d, neuf ? "Commande ajoutée." : "Commande enregistrée.")) { fermer(); render(); }
+      }, "primary"]]);
+  }
+
+  function vRetro() {
+    const T = C.trimestres;
+    const tot = k => T.reduce((s, t) => s + t[k], 0);
+    const sel = state.retroTri != null ? T.find(t => t.tri === state.retroTri) : null;
+    const out = [
+      h("div", { class: "stats" }, stat(eur(tot("total")), "Total à rétrocéder depuis le début"), stat(eur(tot("verse")), "Déjà reversé au siège"),
+        stat(eur(tot("total") - tot("verse")), "Reste à reverser", tot("total") - tot("verse") > 0.5 ? "alerte" : "ok"), stat(eur(tot("aRegler") + tot("aFacturer")), "Pas encore encaissé (à régler ou à facturer)")),
+      h("div", { class: "toolbar" }, h("span", { class: "muted", style: "font-size:13px" }, "Lignes produits HT, hors frais de port, des articles marqués « à rétrocéder ». Cliquez un trimestre pour voir ses factures."), h("span", { class: "spacer" }),
+        h("button", { class: "btn", onclick: () => exporterCsv("retrocession-john-taylor.csv", [["Trimestre", "Commandes", "À rétrocéder", "Factures réglées", "À régler", "À facturer", "État inconnu", "Versé", "Reste dû"],
+          ...T.map(t => [triFr(t.tri), t.n, r2(t.total), r2(t.regle), r2(t.aRegler), r2(t.aFacturer), r2(t.autre), r2(t.verse), r2(t.total - t.verse)])]) }, "Exporter")),
+      table(["Trimestre", ">Commandes", ">À rétrocéder", ">Factures réglées", ">À régler", ">À facturer", ">Versé au siège", ">Reste dû", ""], T.map(t =>
+        h("tr", { class: "clic", style: sel === t ? "background:var(--hover)" : "", onclick: () => { state.retroTri = sel === t ? null : t.tri; render(); } },
+          h("td", null, h("b", null, triFr(t.tri))), h("td", { class: "r" }, t.n), h("td", { class: "r" }, eur(t.total)), h("td", { class: "r" }, eur(t.regle)),
+          h("td", { class: "r " + (t.aRegler ? "bas" : "") }, eur(t.aRegler)), h("td", { class: "r " + (t.aFacturer ? "neg" : "") }, eur(t.aFacturer + t.autre)),
+          h("td", { class: "r" }, eur(t.verse)), h("td", { class: "r " + (t.total - t.verse > 0.5 ? "neg" : "") }, eur(t.total - t.verse)),
+          h("td", { class: "r" }, t.tri ? h("button", { class: "btn small", onclick: e => { e.stopPropagation(); pVersement(t); } }, "Versement") : null))),
+        h("tr", null, h("td", null, "Total"), h("td", { class: "r" }, tot("n")), h("td", { class: "r" }, eur(tot("total"))), h("td", { class: "r" }, eur(tot("regle"))), h("td", { class: "r" }, eur(tot("aRegler"))),
+          h("td", { class: "r" }, eur(tot("aFacturer") + tot("autre"))), h("td", { class: "r" }, eur(tot("verse"))), h("td", { class: "r" }, eur(tot("total") - tot("verse"))), h("td"))),
+    ];
+    if (sel) {
+      const cmds = db.commandes.filter(c => c._tri === sel.tri && c.etat !== "Annulée").sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+      out.push(h("section", { class: "bloc" }, h("h3", null, "Factures de " + triFr(sel.tri)),
+        table(["N°", "Date", "Agence", "Facturé à", "Facture", "État", ">À rétrocéder"], cmds.map(c => h("tr", { class: "clic", onclick: () => pCommande(c) },
+          h("td", null, c.numero), h("td", null, dateFr(c.date)), h("td", null, c.agence || "—"), h("td", null, c.factureA || "—"), h("td", null, c.facture || c.factureNum || "—"), h("td", null, etatEl(c.etat)),
+          h("td", { class: "r" }, c.retroExclue ? h("span", { class: "tag" }, "exclue") : eur(c._retro)))))));
+    }
+    return out;
+  }
+  function pVersement(t) {
+    const reste = r2(t.total - t.verse);
+    const d = h("input", { type: "date", value: auj() }), m = h("input", { inputMode: "decimal", value: reste > 0 ? String(reste).replace(".", ",") : "" }), ref = h("input", { placeholder: "ex. virement du 12/01, avoir n°…" });
+    const hist = db.versements.filter(v => v.trimestre === t.tri);
+    panneau("Versement au siège · " + triFr(t.tri), [
+      h("p", { class: "muted", style: "margin:0" }, "À rétrocéder : " + eur(t.total) + ". Déjà versé : " + eur(t.verse) + ". Reste dû : " + eur(reste) + "."),
+      h("div", { class: "fields" }, champ("Date", d), champ("Montant versé (€)", m), h("div", { class: "field full" }, h("label", null, "Référence"), ref)),
+      hist.length ? table(["Date", ">Montant", "Référence", ""], hist.map(v => h("tr", null, h("td", null, dateFr(v.date)), h("td", { class: "r" }, eur(v.montant)), h("td", null, v.reference || ""),
+        h("td", { class: "r" }, h("button", { class: "btn small danger", onclick: async () => { if (await supprimer("versements", v.id)) { fermer(); render(); } } }, "Supprimer"))))) : null,
+    ], [["Enregistrer le versement", async () => { if (!num(m.value)) return toast("Indiquez le montant versé.");
+      if (await sauver("versements", { id: uid("ver"), trimestre: t.tri, date: d.value || auj(), montant: num(m.value), reference: ref.value.trim(), par: state.me.email }, "Versement enregistré.")) { fermer(); render(); } }, "primary"]]);
+  }
+
+  function vAchats() {
+    const par = new Map();
+    for (const a of db.achats) { const g = par.get(a.devis) || { devis: a.devis, lib: a.libelleDevis || a.devis, lignes: [], total: 0 }; g.lignes.push(a); g.total += a.totalHT; par.set(a.devis, g); }
+    const groupes = [...par.values()];
+    return [
+      h("div", { class: "toolbar" }, h("span", { class: "muted", style: "font-size:13px" }, "Ce que le siège a commandé et payé : c'est ce qui crée le stock."), h("span", { class: "spacer" }),
+        h("button", { class: "btn primary", onclick: () => pAchat(null) }, "+ Achat du siège")),
+      h("div", { class: "stats" }, stat(eur(db.achats.reduce((s, a) => s + a.totalHT, 0)), "Total acheté par le siège (HT)"), stat(String(groupes.length), "Devis ou avenants"), stat(nb(db.achats.reduce((s, a) => s + a.quantite, 0)), "Unités entrées en stock"),
+        stat(eur(C.stock.reduce((s, x) => s + x.valeur, 0)), "Valeur du stock restant")),
+      ...groupes.map(g => h("section", { class: "bloc" }, h("div", { class: "top" }, h("h3", null, g.lib), h("b", { class: "num" }, eur(g.total))),
+        table(["Article", "Date", ">Quantité", ">PU HT", ">Total HT"], g.lignes.map(a => h("tr", { class: "clic", onclick: () => pAchat(a) }, h("td", null, C.art.get(a.articleId)?.nom || h("span", { class: "neg" }, "Article inconnu")),
+          h("td", null, dateFr(a.date)), h("td", { class: "r" }, nb(a.quantite)), h("td", { class: "r" }, eur(a.puht)), h("td", { class: "r" }, eur(a.totalHT))))))),
+    ];
+  }
+  function pAchat(a) {
+    const d = a ? { ...a } : { id: "", articleId: "", devis: "", libelleDevis: "", date: auj(), quantite: 0, puht: 0, totalHT: 0 };
+    const arts = [...db.articles].sort((x, y) => x.nom.localeCompare(y.nom, "fr"));
+    const i = (k, props) => h("input", { value: d[k] ?? "", oninput: e => d[k] = e.target.value, ...props });
+    panneau(a ? "Achat du siège" : "Nouvel achat du siège", [h("div", { class: "fields" },
+      h("div", { class: "field full" }, h("label", null, "Article"), h("select", { onchange: e => d.articleId = e.target.value }, h("option", { value: "" }, "Choisir un article…"), arts.map(x => h("option", { value: x.id, selected: x.id === d.articleId }, x.nom)))),
+      champ("N° de devis Sellsy", i("devis", { list: "dl-devis", placeholder: "ex. 14837" })), champ("Date", i("date", { type: "date" })),
+      champ("Quantité (unités)", i("quantite", { inputMode: "decimal" })), champ("Prix unitaire HT (€)", i("puht", { inputMode: "decimal" })),
+      h("datalist", { id: "dl-devis" }, [...new Set(db.achats.map(x => x.devis))].map(v => h("option", { value: v }))))],
+      [a ? ["Supprimer", async () => { if (confirm("Supprimer cet achat ? Le stock de l'article baissera d'autant.") && await supprimer("achats", a.id)) { fermer(); render(); } }, "danger"] : null,
+       ["Enregistrer", async () => {
+        if (!d.articleId || !String(d.devis).trim()) return toast("Choisissez l'article et indiquez le numéro de devis.");
+        d.devis = String(d.devis).trim(); d.quantite = num(d.quantite); d.puht = num(d.puht); d.totalHT = r2(d.quantite * d.puht);
+        d.libelleDevis = db.achats.find(x => x.devis === d.devis)?.libelleDevis || "Devis " + d.devis; d.date = d.date || null;
+        if (!a) d.id = uid("ach");
+        if (await sauver("achats", d)) { fermer(); render(); } }, "primary"]]);
+  }
+
+  function vCatalogue() {
+    const bascule = (a, k) => h("input", { type: "checkbox", checked: !!a[k], "aria-label": k === "enStock" ? "En stock" : "À rétrocéder", style: "width:18px;height:18px;accent-color:var(--magenta)",
+      onchange: async e => { const v = e.target.checked; if (await sauver("articles", { ...a, [k]: v }, a.nom + " : " + (k === "enStock" ? (v ? "suivi en stock" : "retiré du stock") : (v ? "à rétrocéder" : "non rétrocédé")) + ".")) render(); else e.target.checked = !v; } });
+    const arts = [...db.articles].sort((a, b) => a.categorie.localeCompare(b.categorie, "fr") || a.nom.localeCompare(b.nom, "fr"));
+    return [
+      h("div", { class: "toolbar" }, h("span", { class: "muted", style: "font-size:13px" }, "Les articles cochés « en stock » sont suivis ; ceux cochés « à rétrocéder » entrent dans la rétrocession. Les prix viennent du catalogue WooCommerce du nouveau site."), h("span", { class: "spacer" }),
+        h("button", { class: "btn primary", onclick: () => pArticle(null) }, "+ Article")),
+      table(["Article", "Catégorie", "En stock", "À rétrocéder", ">Prix de vente HT", ">PU achat siège", "Nouveau site", ""], arts.map(a => { const s = C.stock.find(x => x.a.id === a.id);
+        return h("tr", null, h("td", null, a.nom), h("td", null, a.categorie), h("td", null, bascule(a, "enStock")), h("td", null, bascule(a, "aRetroceder")),
+          h("td", { class: "r" }, a.prixActuel ? eur(a.prixActuel) : h("span", { class: "muted" }, "—")), h("td", { class: "r" }, s && s.pmp ? eur(s.pmp) : h("span", { class: "muted" }, "—")),
+          h("td", null, (a.woo || []).length ? (a.woo || []).map(w => h("a", { href: w.lien, target: "_blank", rel: "noopener", style: "color:inherit;display:block" }, w.nom)) : h("span", { class: "tag" }, "absent")),
+          h("td", { class: "r" }, h("button", { class: "btn small", onclick: () => pArticle(a) }, "Modifier"))); })),
+    ];
+  }
+  function pArticle(a) {
+    const d = a ? { ...a } : { id: "", nom: "", categorie: "", enStock: true, aRetroceder: true, prixActuel: null, woo: [], surNouveauSite: false };
+    const i = (k, props) => h("input", { value: d[k] ?? "", oninput: e => d[k] = e.target.value, ...props });
+    panneau(a ? a.nom : "Nouvel article", [h("div", { class: "fields" },
+      h("div", { class: "field full" }, h("label", null, "Nom"), i("nom")), champ("Catégorie", i("categorie", { list: "dl-cat" })), champ("Prix de vente unitaire HT (€)", i("prixActuel", { inputMode: "decimal" })),
+      h("datalist", { id: "dl-cat" }, [...new Set(db.articles.map(x => x.categorie))].map(v => h("option", { value: v }))))],
+      [["Enregistrer", async () => { if (!String(d.nom).trim()) return toast("Indiquez le nom de l'article.");
+        d.nom = d.nom.trim(); d.categorie = (d.categorie || "Autres").trim(); d.prixActuel = num(d.prixActuel) || null;
+        if (!a) { d.id = slug(d.nom); if (db.articles.some(x => x.id === d.id)) return toast("Un article porte déjà ce nom."); }
+        if (await sauver("articles", d)) { fermer(); render(); } }, "primary"]]);
+  }
+
+  function vAgences() {
+    const es = [...db.entites].sort((a, b) => a.sortie - b.sortie || a.agence.localeCompare(b.agence, "fr"));
+    const ca = new Map(); for (const c of db.commandes) if (c.agence) { const k = slug(c.agence); ca.set(k, (ca.get(k) || 0) + c._total); }
+    return [
+      h("div", { class: "toolbar" }, h("span", { class: "muted", style: "font-size:13px" }, "Les agences en propre sont facturées sur JT SA ; les filiales le sont en nom propre. Liste reprise du tableau Monday « Informations de Facturation & Livraison par agence »."), h("span", { class: "spacer" }),
+        h("button", { class: "btn primary", onclick: () => pEntite(null) }, "+ Agence")),
+      table(["Agence", "Entité facturée", "Facturation", "Statut", ""], es.map(e => h("tr", null, h("td", null, e.agence), h("td", null, e.entite || h("span", { class: "neg" }, "à renseigner")),
+        h("td", null, h("span", { class: "tag" }, e.factureSur)), h("td", null, e.sortie ? h("span", { class: "tag alerte" }, "sortie du réseau") : h("span", { class: "muted" }, e.typeMonday || "")),
+        h("td", { class: "r" }, h("button", { class: "btn small", onclick: () => pEntite(e) }, "Modifier"))))),
+    ];
+  }
+  function pEntite(e) {
+    const d = e ? { ...e } : { id: "", agence: "", entite: "", factureSur: FACTURE_SUR[1], typeMonday: "", sortie: false };
+    const i = (k, props) => h("input", { value: d[k] ?? "", oninput: ev => d[k] = ev.target.value, ...props });
+    const sortie = h("input", { type: "checkbox", checked: !!d.sortie, onchange: ev => d.sortie = ev.target.checked });
+    panneau(e ? e.agence : "Nouvelle agence", [h("div", { class: "fields" },
+      h("div", { class: "field full" }, h("label", null, "Agence"), i("agence", { disabled: !!e })), h("div", { class: "field full" }, h("label", null, "Entité facturée (raison sociale)"), i("entite")),
+      h("div", { class: "field full" }, h("label", null, "Facturation"), h("select", { onchange: ev => d.factureSur = ev.target.value }, FACTURE_SUR.map(o => h("option", { selected: o === d.factureSur }, o)))),
+      h("label", { class: "check field full" }, sortie, "Agence sortie du réseau"))],
+      [e ? ["Supprimer", async () => { if (confirm("Supprimer " + e.agence + " de la liste ?") && await supprimer("entites", e.id)) { fermer(); render(); } }, "danger"] : null,
+       ["Enregistrer", async () => { if (!String(d.agence).trim()) return toast("Indiquez le nom de l'agence."); if (!e) d.id = slug(d.agence); d.agence = d.agence.trim(); d.entite = (d.entite || "").trim();
+        if (await sauver("entites", d)) { fermer(); render(); } }, "primary"]]);
+  }
+
+  function vControles() {
+    if (!C.controles.length) return [h("div", { class: "empty" }, h("strong", null, "Tout est en ordre"), "Aucune commande non facturée, aucun stock négatif, aucune rétrocession en retard.")];
+    const par = new Map(); for (const c of C.controles) { const g = par.get(c.type) || []; g.push(c); par.set(c.type, g); }
+    const ouvrir = c => () => { if (c.cible.cmd) pCommande(db.commandes.find(x => x.id === c.cible.cmd)); else if (c.cible.stock) { state.stock.q = C.art.get(c.cible.stock).nom; state.stock.cat = ""; go("stock"); } else if (c.cible.retro) { state.retroTri = c.cible.retro; go("retro"); } };
+    return [h("p", { class: "muted", style: "margin:0" }, C.controles.length + " points à vérifier. Cette liste se vide au fur et à mesure des corrections ; cliquez une ligne pour l'ouvrir."),
+      ...[...par.entries()].map(([type, lst]) => h("section", { class: "bloc" }, h("div", { class: "top" }, h("h3", null, type), h("span", { class: "pill" + (lst[0].grave ? "" : " zero") }, lst.length)),
+        table(["À vérifier"], lst.map(c => h("tr", { class: "clic", onclick: ouvrir(c) }, h("td", null, c.texte))))))];
+  }
+
+  function vReglages() {
+    const fichier = h("input", { type: "file", accept: ".json,application/json", hidden: true, onchange: e => importer(e.target.files[0]) });
+    const mail = h("input", { type: "email", placeholder: "prenom.nom@exemple.com", "aria-label": "Adresse e-mail à autoriser", style: "flex:1 1 240px;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px" });
+    return [
+      h("section", { class: "bloc" }, h("h3", null, "Données"), h("p", { class: "muted", style: "margin:0" }, db.commandes.length + " commandes, " + db.achats.length + " lignes d'achat du siège, " + db.articles.length + " articles, " + db.entites.length + " agences, " + db.inventaires.length + " comptages, " + db.versements.length + " versements."),
+        h("div", { class: "toolbar" }, fichier, h("button", { class: "btn primary", onclick: () => fichier.click() }, "Importer un fichier de données"),
+          h("button", { class: "btn", onclick: () => telecharger("stock-john-taylor-sauvegarde-" + auj() + ".json", JSON.stringify({ format: "stock-john-taylor/1", genere: new Date().toISOString(), ...Object.fromEntries(COLS.map(c => [c, db[c].map(nettoyer)])) }, null, 1), "application/json") }, "Télécharger une sauvegarde"),
+          h("button", { class: "btn", onclick: async () => { await charger(); toast("Données actualisées."); } }, "Actualiser")),
+        h("p", { class: "muted", style: "margin:0;font-size:13px" }, "L'import ajoute les nouvelles fiches et met à jour celles qui portent le même identifiant ; il ne supprime rien. Les commandes du nouveau site et le catalogue WooCommerce arrivent par ce même import.")),
+      h("section", { class: "bloc" }, h("h3", null, "Accès"), h("p", { class: "muted", style: "margin:0" }, "Tous les comptes Google @smartshop.fr ont accès. Ajoutez ici les adresses Google externes à autoriser (par exemple la cliente)."),
+        h("div", { class: "toolbar" }, mail, h("button", { class: "btn primary", onclick: async () => { const m = mail.value.trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m)) return toast("Adresse e-mail invalide.");
+          if (await sauver("acces", { id: m, ajoutePar: state.me.email, ajouteLe: auj() }, m + " peut maintenant se connecter.")) render(); } }, "Autoriser")),
+        db.acces.length ? table(["Adresse", "Ajoutée par", ""], db.acces.map(a => h("tr", null, h("td", null, a.id), h("td", null, (a.ajoutePar || "") + (a.ajouteLe ? " · " + dateFr(a.ajouteLe) : "")),
+          h("td", { class: "r" }, h("button", { class: "btn small danger", onclick: async () => { if (confirm("Retirer l'accès de " + a.id + " ?") && await supprimer("acces", a.id, "Accès retiré.")) render(); } }, "Retirer")))))
+          : h("p", { class: "muted", style: "margin:0;font-size:13px" }, "Aucun accès externe.")),
+    ];
+  }
+  const nettoyer = o => Object.fromEntries(Object.entries(o).filter(([k]) => !k.startsWith("_")));
+  async function importer(f) {
+    if (!f) return;
+    let d; try { d = JSON.parse(await f.text()); } catch (_) { return toast("Ce fichier n'est pas lisible."); }
+    if (!String(d.format || "").startsWith("stock-john-taylor/")) return toast("Ce fichier n'est pas un fichier de données Stock John Taylor.");
+    const cols = COLS.filter(c => Array.isArray(d[c]) && d[c].length);
+    if (!confirm("Importer " + cols.map(c => d[c].length + " " + c).join(", ") + " ?\nLes fiches déjà présentes avec le même identifiant seront remplacées.")) return;
+    try { for (const c of cols) { toast("Import des " + c + "…"); await store.bulk(c, d[c].filter(x => x && x.id).map(nettoyer)); } toast("Import terminé."); go("synthese"); }
+    catch (e) { console.error(e); toast(e.code === "permission-denied" ? "Import refusé : les règles d'accès Firebase ne sont pas en place." : "Import interrompu (" + (e.code || e.message) + ")."); render(); }
+  }
+  function telecharger(nom, contenu, type) { const a = h("a", { href: URL.createObjectURL(new Blob([contenu], { type })), download: nom }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
+  function exporterCsv(nom, lignes) {
+    const cell = v => { v = typeof v === "number" ? String(v).replace(".", ",") : String(v ?? ""); return /[";\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    telecharger(nom, "﻿" + lignes.map(l => l.map(cell).join(";")).join("\r\n"), "text/csv;charset=utf-8");
+  }
+
+  // ------------------------------------------------------------ Panneau
+  const champ = (lbl, input) => { const id = uid("f"); input.id = id; return h("div", { class: "field" }, h("label", { for: id }, lbl), input); };
+  let avant = null;
+  function fermer() { $("#overlay").replaceChildren(); document.removeEventListener("keydown", echap); avant?.focus?.(); }
+  function echap(e) { if (e.key === "Escape") fermer(); }
+  function panneau(titre, corps, actions) {
+    avant = document.activeElement;
+    const p = h("aside", { class: "panel", role: "dialog", "aria-modal": "true", "aria-label": titre },
+      h("div", { class: "panel-h" }, h("h3", null, titre), h("button", { class: "icon-btn", "aria-label": "Fermer", onclick: fermer }, "✕")),
+      h("div", { class: "panel-body" }, corps),
+      h("div", { class: "panel-f" }, h("button", { class: "btn", onclick: fermer }, "Annuler"), (actions || []).filter(Boolean).map(([lbl, fn, cls]) => h("button", { class: "btn " + (cls || ""), onclick: fn }, lbl))));
+    $("#overlay").replaceChildren(h("div", { class: "scrim", onclick: fermer }), p);
+    document.addEventListener("keydown", echap);
+    p.querySelector("input:not([disabled]), select")?.focus();
+  }
+
+  // ------------------------------------------------------------ Démarrage
+  const REGLES = `match /stock_jt/{document=**} {
+  allow read, write: if request.auth != null && request.auth.token.email_verified == true
+    && (request.auth.token.email.lower().matches('.*@smartshop[.]fr$')
+        || exists(/databases/$(database)/documents/stock_jt_acces/$(request.auth.token.email.lower())));
+}
+match /stock_jt_acces/{email} {
+  allow read: if request.auth != null && request.auth.token.email_verified == true
+    && (request.auth.token.email.lower().matches('.*@smartshop[.]fr$') || request.auth.token.email.lower() == email);
+  allow write: if request.auth != null && request.auth.token.email_verified == true
+    && request.auth.token.email.lower().matches('.*@smartshop[.]fr$');
+}`;
+  async function charger() {
+    try { await store.load(); state.refus = false; $("#notice").replaceChildren(LOCAL ? h("div", { class: "banner" }, h("b", null, "Mode essai. "), "Les données restent dans ce navigateur et ne sont pas partagées.") : ""); }
+    catch (e) {
+      console.error("Stock JT", e);
+      if (e.code === "permission-denied") { state.refus = true;
+        $("#notice").replaceChildren(h("div", { class: "banner alerte" }, h("b", null, "Accès Firebase à ouvrir. "), "La base de l'outil n'est pas encore autorisée. Dans la console Firebase (projet smartshop-catalogues), Firestore > Règles, ajoutez ce bloc avant les deux dernières accolades fermantes, puis publiez :", h("pre", null, REGLES))); }
+      else $("#notice").replaceChildren(h("div", { class: "banner alerte" }, "Chargement interrompu (" + (e.code || e.message) + "). Actualisez la page."));
+    }
+    state.loaded = true; render();
+  }
+
+  const gate = $("#gate"), chip = $("#userChip");
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const montrer = html => { document.body.classList.add("verrou"); gate.hidden = false;
+    gate.innerHTML = '<div class="gate-card"><img src="/brand/smartshop-logo.png" alt="smartshop">' + html + "</div>";
+    const b = gate.querySelector("button"); if (b) b.focus(); };
+  if (LOCAL) { gate.hidden = true; document.body.classList.remove("verrou"); state.me = { email: "essai@local" }; chip.textContent = "Mode essai"; charger(); return; }
+  if (!window.firebase) { montrer('<p class="gerr">Impossible de charger la connexion Google. Vérifiez votre connexion Internet puis actualisez la page.</p>'); return; }
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  fs = firebase.firestore();
+  function connexion(msg) {
+    montrer("<h1>Stock John Taylor</h1><p>Suivi du stock et de la rétrocession John Taylor, réservé à l'équipe Smartshop et aux personnes autorisées. Connectez-vous avec votre compte Google.</p>"
+      + (msg ? '<p class="gerr">' + esc(msg) + "</p>" : "") + '<button class="gbtn" id="gLogin">Se connecter avec Google</button>');
+    document.getElementById("gLogin").onclick = async () => {
+      try { await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+      catch (e) {
+        console.error("Connexion Google", e);
+        if (e.code === "auth/popup-closed-by-user" || e.code === "auth/cancelled-popup-request")
+          connexion("La fenêtre Google s'est fermée avant la fin de la connexion (" + e.code + "). Réessayez ; si cela se reproduit, autorisez les fenêtres pop-up pour ce site.");
+        else connexion("La connexion a échoué (" + (e.code || e.message) + ").");
+      }
+    };
+  }
+  function refuse(u) {
+    montrer("<h1>Accès non autorisé</h1><p>Le compte <b>" + esc(u.email) + "</b> n'a pas accès à cet outil. Il est réservé aux comptes Google <b>@smartshop.fr</b> et aux adresses autorisées dans ses réglages.</p>"
+      + '<button class="gbtn secondaire" id="gOut">Changer de compte</button>');
+    document.getElementById("gOut").onclick = () => auth.signOut();
+  }
+  function ouvrir(u) {
+    gate.hidden = true; document.body.classList.remove("verrou");
+    state.me = { email: u.email };
+    chip.innerHTML = "<span>Connecté : " + esc(u.email) + '</span><button id="gOut2">Se déconnecter</button>';
+    document.getElementById("gOut2").onclick = () => auth.signOut();
+    charger();
+  }
+  auth.onAuthStateChanged(async u => {
+    if (!u) { fermer(); return connexion(); }
+    if (!u.emailVerified) return refuse(u);
+    if (/@smartshop\.fr$/i.test(u.email || "")) return ouvrir(u);
+    try { const d = await fs.collection("stock_jt_acces").doc(u.email.toLowerCase()).get(); d.exists ? ouvrir(u) : refuse(u); }
+    catch (_) { refuse(u); }
+  });
+})();
+</script>
+</body>
+</html>
