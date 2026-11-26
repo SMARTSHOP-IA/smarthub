@@ -71,7 +71,8 @@ Dans Firestore > Règles, avant les deux dernières accolades fermantes :
 
 ```
 match /stock_jt/{document=**} {
-  allow read, write: if request.auth != null && request.auth.token.email_verified == true
+  allow read, write: if request.auth != null && request.auth.uid == 'claude-stock-jt'
+    || request.auth != null && request.auth.token.email_verified == true
     && (request.auth.token.email.lower().matches('.*@smartshop[.]fr$')
         || exists(/databases/$(database)/documents/stock_jt_acces/$(request.auth.token.email.lower())));
 }
@@ -90,3 +91,8 @@ Sans ces règles, la page affiche « Accès Firebase à ouvrir ».
 Les numéros de facture et de devis s'ouvrent dans Sellsy quand la fiche porte l'identifiant interne du document
 (`sellsyFactureId`, `sellsyDevisId`). Ces identifiants viennent d'un fichier « liens Sellsy » produit à partir de
 l'API Sellsy et importé en mode « fusion » dans Réglages. Sans identifiant, le numéro reste un simple texte.
+
+La mise à jour est faite toutes les heures par une tâche programmée, hors de la page : elle se connecte avec le
+compte technique `claude-stock-jt` (première ligne de la règle `stock_jt`, seul accès de ce compte) et note son
+passage dans `stock_jt/base/etat/sellsy`. Le bouton « Mettre à jour les liens Sellsy » de Réglages y dépose une
+demande, traitée au passage suivant.
