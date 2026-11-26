@@ -49,6 +49,12 @@ La page ne contient aucune donnée. Elles sont dans Firebase (projet `smartshop-
 Les accès externes sont dans `stock_jt_acces/<e-mail>` et se gèrent depuis l'onglet Réglages.
 L'historique se charge depuis Réglages > Importer (fichier produit par le dépôt privé `stock-john-taylor`).
 
+Sauvegardes : chaque modification est notée dans `stock_jt/base/journal` (qui, quand, fiche avant et après).
+Une copie complète des données est écrite dans `stock_jt/base/sauvegardes/<date>` (texte découpé dans la
+sous-collection `morceaux`) dans les 30 secondes qui suivent la dernière modification, avant chaque import et
+avant chaque restauration. Les 100 dernières copies automatiques sont gardées, les copies manuelles toujours.
+Réglages > Sauvegardes automatiques permet de les télécharger ou de restaurer l'une d'elles.
+
 `/stock-jt/?local=1` ouvre un mode essai sans connexion : les données restent dans le navigateur.
 
 ### Règles d'accès

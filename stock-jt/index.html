@@ -254,13 +254,109 @@ body.verrou .wrap { display: none; }
       for (const d of docs) { const i = db[col].findIndex(x => x.id === d.id); i < 0 ? db[col].push(d) : db[col][i] = d; }
     },
   };
+  // ------------------------------------------------------------ Sauvegardes et historique
+  // Chaque modification est notée dans stock_jt/base/journal (qui, quand, avant, après). Une copie complète
+  // des données part dans stock_jt/base/sauvegardes dans les 30 secondes qui suivent la dernière modification
+  // (les modifications faites à la suite sont regroupées). Les 100 dernières copies automatiques sont gardées.
+  const MAX_AUTO = 100, DELAI_SAUVEGARDE = 30000, MORCEAU = 900000;
+  const S = { liste: [], journal: [], timer: null, enCours: null, erreur: "", tout: false, toutJ: false };
+  const lsLire = k => { try { return JSON.parse(localStorage.getItem(k) || "[]"); } catch (_) { return []; } };
+  const coffre = LOCAL ? {
+    async liste() { return lsLire("stockjt-local-sauv").map(({ contenu, ...m }) => m); },
+    async ecrire(meta, contenu) { let l = [{ ...meta, contenu }, ...lsLire("stockjt-local-sauv")].slice(0, 6);
+      for (;;) { try { localStorage.setItem("stockjt-local-sauv", JSON.stringify(l)); break; } catch (e) { if (l.length <= 1) throw e; l.pop(); } } },
+    async lire(id) { return lsLire("stockjt-local-sauv").find(x => x.id === id)?.contenu; },
+    async effacer(id) { localStorage.setItem("stockjt-local-sauv", JSON.stringify(lsLire("stockjt-local-sauv").filter(x => x.id !== id))); },
+    async noter(e) { try { localStorage.setItem("stockjt-local-journal", JSON.stringify([e, ...lsLire("stockjt-local-journal")].slice(0, 150))); } catch (_) {} },
+    async journal(n) { return lsLire("stockjt-local-journal").slice(0, n); },
+  } : {
+    col() { return fs.collection("stock_jt").doc("base").collection("sauvegardes"); },
+    async liste() { return (await this.col().orderBy("date", "desc").limit(300).get()).docs.map(d => ({ ...d.data(), id: d.id })); },
+    // La fiche de la sauvegarde est écrite en dernier : une sauvegarde visible dans la liste est toujours complète.
+    async ecrire(meta, contenu) { const { id, ...m } = meta, n = Math.ceil(contenu.length / MORCEAU);
+      for (let i = 0; i < n; i++) await this.col().doc(id).collection("morceaux").doc(String(i).padStart(3, "0")).set({ t: contenu.slice(i * MORCEAU, (i + 1) * MORCEAU) });
+      await this.col().doc(id).set({ ...m, morceaux: n }); },
+    async lire(id) { const q = await this.col().doc(id).collection("morceaux").get(); return q.docs.sort((a, b) => a.id < b.id ? -1 : 1).map(d => d.data().t).join(""); },
+    async effacer(id) { const q = await this.col().doc(id).collection("morceaux").get(); await this.col().doc(id).delete(); for (const d of q.docs) await d.ref.delete(); },
+    async noter(e) { await fs.collection("stock_jt").doc("base").collection("journal").add(e); },
+    async journal(n) { return (await fs.collection("stock_jt").doc("base").collection("journal").orderBy("date", "desc").limit(n).get()).docs.map(d => d.data()); },
+  };
+  const quand = iso => new Date(iso).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
+  const copie = o => o ? JSON.parse(JSON.stringify(nettoyer(o))) : null;
+  const instantane = () => JSON.stringify({ format: "stock-john-taylor/1", genere: new Date().toISOString(), ...Object.fromEntries(COLS.map(c => [c, db[c].map(nettoyer)])) });
+  // Texte ramené en ASCII pour être découpé sans risque en morceaux de moins de 1 Mo (limite d'une fiche Firestore).
+  const ascii = t => t.replace(/[\u0080-￿]/g, c => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
+  function creerSauvegarde(type, motif) {
+    const suite = (S.enCours || Promise.resolve()).catch(() => {}).then(async () => {
+      clearTimeout(S.timer); S.timer = null;
+      if (!COLS.some(c => db[c].length)) return null;
+      const date = new Date().toISOString();
+      const meta = { id: date.replace(/\D/g, "").slice(0, 14) + "-" + Math.random().toString(36).slice(2, 6), date, par: state.me.email, type, motif: motif || "", compte: Object.fromEntries(COLS.map(c => [c, db[c].length])) };
+      await coffre.ecrire(meta, ascii(instantane()));
+      S.liste.unshift(meta); S.erreur = "";
+      for (const vieux of S.liste.filter(x => x.type === "auto").slice(MAX_AUTO)) {
+        try { await coffre.effacer(vieux.id); S.liste = S.liste.filter(x => x.id !== vieux.id); } catch (e) { console.warn("Purge des sauvegardes", e); }
+      }
+      return meta;
+    });
+    S.enCours = suite;
+    return suite;
+  }
+  const autoSauvegarde = motif => creerSauvegarde("auto", motif).catch(e => { console.error("Sauvegarde automatique", e); S.erreur = e.code || e.message || "erreur"; toast("La sauvegarde automatique n'a pas pu être enregistrée (" + S.erreur + ")."); });
+  // À appeler après chaque écriture réussie.
+  function modifie(entree) {
+    const e = { date: new Date().toISOString(), par: state.me.email, ...entree };
+    S.journal.unshift(e); coffre.noter(e).catch(err => console.warn("Journal", err));
+    if (entree.col === "acces") return;
+    clearTimeout(S.timer); S.timer = setTimeout(() => autoSauvegarde(), DELAI_SAUVEGARDE);
+  }
+  document.addEventListener("visibilitychange", () => { if (document.hidden && S.timer) autoSauvegarde(); });
+  // Avant une opération en masse : s'assurer que l'état actuel a bien sa sauvegarde.
+  async function sauvegardeAvant(motif) { if (S.timer || !S.liste.length) await creerSauvegarde("auto", motif); }
+  // À l'ouverture : charge la liste, et rattrape une sauvegarde manquante (page fermée trop vite, premier lancement).
+  async function rattraper() {
+    try {
+      [S.liste, S.journal] = await Promise.all([coffre.liste(), coffre.journal(150)]);
+      const dernier = S.journal.find(e => e.col !== "acces");
+      if (!S.liste.length || (dernier && dernier.date > S.liste[0].date)) await creerSauvegarde("auto", S.liste.length ? "Rattrapage à l'ouverture" : "Première sauvegarde");
+      S.erreur = "";
+    } catch (e) { console.error("Sauvegardes", e); S.erreur = e.code || e.message || "erreur"; }
+    if (state.tab === "reglages" && !$("#overlay").children.length) render();
+  }
+  const libelle = (col, d) => !d ? "" : col === "commandes" ? "Commande " + (d.numero || d.id) : col === "articles" ? "Article " + (d.nom || d.id)
+    : col === "achats" ? "Achat du siège " + (d.devis || "") + " · " + (db.articles.find(a => a.id === d.articleId)?.nom || d.libelleDevis || "")
+    : col === "entites" ? "Agence " + (d.agence || d.id) : col === "inventaires" ? "Comptage · " + (db.articles.find(a => a.id === d.articleId)?.nom || "")
+    : col === "versements" ? "Versement " + (d.trimestre || "") : col === "acces" ? "Accès " + d.id : d.id;
+
   async function sauver(col, doc, msg) {
-    try { await store.set(col, doc); toast(msg || "Enregistré."); return true; }
+    const avant = copie(db[col].find(x => x.id === doc.id));
+    try { await store.set(col, doc); modifie({ col, action: avant ? "Modification" : "Ajout", fiche: doc.id, libelle: libelle(col, doc), avant, apres: copie(doc) }); toast(msg || "Enregistré."); return true; }
     catch (e) { console.error(e); toast(e.code === "permission-denied" ? "Enregistrement refusé : les règles d'accès Firebase ne sont pas en place." : "Enregistrement impossible (" + (e.code || e.message) + ")."); return false; }
   }
   async function supprimer(col, id, msg) {
-    try { await store.del(col, id); toast(msg || "Supprimé."); return true; }
+    const avant = copie(db[col].find(x => x.id === id));
+    try { await store.del(col, id); modifie({ col, action: "Suppression", fiche: id, libelle: libelle(col, avant || { id }), avant, apres: null }); toast(msg || "Supprimé."); return true; }
     catch (e) { console.error(e); toast("Suppression impossible (" + (e.code || e.message) + ")."); return false; }
+  }
+  async function restaurer(x) {
+    if (!confirm("Remettre l'outil dans l'état du " + quand(x.date) + " ?\n\nLes modifications faites depuis seront annulées. L'état actuel est d'abord sauvegardé : vous pourrez y revenir.")) return;
+    try {
+      toast("Sauvegarde de l'état actuel…"); await creerSauvegarde("manuel", "Avant restauration du " + quand(x.date));
+      const d = JSON.parse(await coffre.lire(x.id));
+      if (!String(d.format || "").startsWith("stock-john-taylor/")) throw new Error("sauvegarde illisible");
+      for (const c of COLS) {
+        toast("Restauration des " + c + "…");
+        const docs = (d[c] || []).filter(o => o && o.id), garde = new Set(docs.map(o => o.id));
+        for (const o of db[c].filter(o => !garde.has(o.id))) await store.del(c, o.id);
+        await store.bulk(c, docs);
+      }
+      modifie({ col: "", action: "Restauration", libelle: "Sauvegarde du " + quand(x.date) });
+      toast("Restauration terminée."); go("synthese");
+    } catch (e) { console.error(e); toast("Restauration interrompue (" + (e.code || e.message) + "). Actualisez la page."); render(); }
+  }
+  async function telechargerSauvegarde(x) {
+    try { telecharger("stock-john-taylor-sauvegarde-" + x.date.slice(0, 16).replace(/[:T]/g, "-") + ".json", await coffre.lire(x.id), "application/json"); }
+    catch (e) { console.error(e); toast("Téléchargement impossible (" + (e.code || e.message) + ")."); }
   }
 
   // ------------------------------------------------------------ Calculs
@@ -641,6 +737,24 @@ body.verrou .wrap { display: none; }
           h("button", { class: "btn", onclick: () => telecharger("stock-john-taylor-sauvegarde-" + auj() + ".json", JSON.stringify({ format: "stock-john-taylor/1", genere: new Date().toISOString(), ...Object.fromEntries(COLS.map(c => [c, db[c].map(nettoyer)])) }, null, 1), "application/json") }, "Télécharger une sauvegarde"),
           h("button", { class: "btn", onclick: async () => { await charger(); toast("Données actualisées."); } }, "Actualiser")),
         h("p", { class: "muted", style: "margin:0;font-size:13px" }, "L'import ajoute les nouvelles fiches et met à jour celles qui portent le même identifiant ; il ne supprime rien. Les commandes du nouveau site et le catalogue WooCommerce arrivent par ce même import.")),
+      h("section", { class: "bloc" }, h("div", { class: "top" }, h("h3", null, "Sauvegardes automatiques"),
+          h("button", { class: "btn small", onclick: async () => { try { toast("Sauvegarde en cours…"); const m = await creerSauvegarde("manuel", "Sauvegarde demandée"); toast(m ? "Sauvegarde créée." : "Rien à sauvegarder pour l'instant."); render(); } catch (e) { console.error(e); toast("Sauvegarde impossible (" + (e.code || e.message) + ")."); } } }, "Sauvegarder maintenant")),
+        h("p", { class: "muted", style: "margin:0" }, "Une copie complète des données est enregistrée automatiquement dans la demi-minute qui suit chaque modification. Vous pouvez télécharger une copie ou remettre l'outil dans l'état où il était à ce moment-là."),
+        S.erreur ? h("p", { class: "muted", style: "margin:0;color:var(--magenta)" }, "Les sauvegardes ne sont pas accessibles pour le moment (" + S.erreur + ").") : null,
+        S.liste.length ? table(["Date", "Par", "Contenu", "", ""], (S.tout ? S.liste : S.liste.slice(0, 10)).map(x => h("tr", null,
+          h("td", null, h("b", null, quand(x.date)), x.type === "manuel" || x.motif ? h("div", { class: "muted", style: "font-size:12.5px" }, x.motif || "Manuelle") : null),
+          h("td", null, (x.par || "").split("@")[0]),
+          h("td", { class: "muted" }, (x.compte?.commandes || 0) + " commandes, " + (x.compte?.achats || 0) + " achats, " + (x.compte?.versements || 0) + " versements, " + (x.compte?.inventaires || 0) + " comptages"),
+          h("td", { class: "r" }, h("button", { class: "btn small", onclick: () => telechargerSauvegarde(x) }, "Télécharger")),
+          h("td", { class: "r" }, h("button", { class: "btn small", onclick: () => restaurer(x) }, "Restaurer")))))
+          : h("p", { class: "muted", style: "margin:0;font-size:13px" }, "Aucune sauvegarde pour l'instant. La première se crée dès que l'outil contient des données."),
+        S.liste.length > 10 ? h("button", { class: "btn small", style: "justify-self:start", onclick: () => { S.tout = !S.tout; render(); } }, S.tout ? "Voir moins" : "Voir les " + S.liste.length + " sauvegardes") : null,
+        h("p", { class: "muted", style: "margin:0;font-size:13px" }, "Les " + MAX_AUTO + " dernières sauvegardes automatiques sont conservées ; celles créées à la main ou avant une restauration ne sont jamais effacées.")),
+      h("section", { class: "bloc" }, h("h3", null, "Historique des modifications"),
+        S.journal.length ? table(["Date", "Par", "Modification"], (S.toutJ ? S.journal : S.journal.slice(0, 15)).map(e => h("tr", null,
+          h("td", null, quand(e.date)), h("td", null, (e.par || "").split("@")[0]), h("td", null, h("b", null, e.action + " "), e.libelle || ""))))
+          : h("p", { class: "muted", style: "margin:0;font-size:13px" }, "Aucune modification enregistrée pour l'instant."),
+        S.journal.length > 15 ? h("button", { class: "btn small", style: "justify-self:start", onclick: () => { S.toutJ = !S.toutJ; render(); } }, S.toutJ ? "Voir moins" : "Voir les " + S.journal.length + " dernières modifications") : null),
       h("section", { class: "bloc" }, h("h3", null, "Accès"), h("p", { class: "muted", style: "margin:0" }, "Tous les comptes Google @smartshop.fr ont accès. Ajoutez ici les adresses Google externes à autoriser (par exemple la cliente)."),
         h("div", { class: "toolbar" }, mail, h("button", { class: "btn primary", onclick: async () => { const m = mail.value.trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m)) return toast("Adresse e-mail invalide.");
           if (await sauver("acces", { id: m, ajoutePar: state.me.email, ajouteLe: auj() }, m + " peut maintenant se connecter.")) render(); } }, "Autoriser")),
@@ -656,7 +770,10 @@ body.verrou .wrap { display: none; }
     if (!String(d.format || "").startsWith("stock-john-taylor/")) return toast("Ce fichier n'est pas un fichier de données Stock John Taylor.");
     const cols = COLS.filter(c => Array.isArray(d[c]) && d[c].length);
     if (!confirm("Importer " + cols.map(c => d[c].length + " " + c).join(", ") + " ?\nLes fiches déjà présentes avec le même identifiant seront remplacées.")) return;
-    try { for (const c of cols) { toast("Import des " + c + "…"); await store.bulk(c, d[c].filter(x => x && x.id).map(nettoyer)); } toast("Import terminé."); go("synthese"); }
+    try { await sauvegardeAvant("Avant import");
+      for (const c of cols) { toast("Import des " + c + "…"); await store.bulk(c, d[c].filter(x => x && x.id).map(nettoyer)); }
+      modifie({ col: "", action: "Import", libelle: cols.map(c => d[c].length + " " + c).join(", ") + " (" + f.name + ")" });
+      toast("Import terminé."); go("synthese"); }
     catch (e) { console.error(e); toast(e.code === "permission-denied" ? "Import refusé : les règles d'accès Firebase ne sont pas en place." : "Import interrompu (" + (e.code || e.message) + ")."); render(); }
   }
   function telecharger(nom, contenu, type) { const a = h("a", { href: URL.createObjectURL(new Blob([contenu], { type })), download: nom }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
@@ -702,6 +819,7 @@ match /stock_jt_acces/{email} {
       else $("#notice").replaceChildren(h("div", { class: "banner alerte" }, "Chargement interrompu (" + (e.code || e.message) + "). Actualisez la page."));
     }
     state.loaded = true; render();
+    if (!state.refus) rattraper();
   }
 
   const gate = $("#gate"), chip = $("#userChip");
