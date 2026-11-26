@@ -49,6 +49,10 @@ La page ne contient aucune donnée. Elles sont dans Firebase (projet `smartshop-
 Les accès externes sont dans `stock_jt_acces/<e-mail>` et se gèrent depuis l'onglet Réglages.
 L'historique se charge depuis Réglages > Importer (fichier produit par le dépôt privé `stock-john-taylor`).
 
+Photos : le champ `image` d'un article contient soit l'adresse de la photo du produit sur le site WooCommerce
+(fichier produit par `scripts/photos_woo.py` du dépôt `stock-john-taylor`, importé en mode « fusion »), soit
+une photo ajoutée à la main depuis la fiche de l'article, réduite à 480 px et enregistrée dans la fiche.
+
 Sauvegardes : chaque modification est notée dans `stock_jt/base/journal` (qui, quand, fiche avant et après).
 Une copie complète des données est écrite dans `stock_jt/base/sauvegardes/<date>` (texte découpé dans la
 sous-collection `morceaux`) dans les 30 secondes qui suivent la dernière modification, avant chaque import et
