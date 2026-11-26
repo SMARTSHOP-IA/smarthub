@@ -408,15 +408,30 @@ body.verrou .wrap { display: none; }
       const actuel = s.inv ? s.inv.quantite + s.apresAchat - s.apresVente : theorique;
       const ecart = s.inv ? s.inv.quantite - (theorique - s.apresAchat + s.apresVente) : null;
       const pmp = s.achete ? s.valAchat / s.achete : 0;
-      return { ...s, theorique, actuel, ecart, pmp, valeur: Math.max(actuel, 0) * pmp };
+      // Lots d'achat dans l'ordre d'arrivée (stock apporté, puis date, puis numéro de devis), consommés du plus ancien au plus récent.
+      const ordre = x => (x.devis === "STOCK-JT" ? "0" : "1") + (x.date || "0000-00-00") + String(x.devis || "").padStart(12, "0");
+      let cumul = 0, prec = null;
+      const lots = db.achats.filter(x => x.articleId === s.a.id).sort((x, y) => ordre(x).localeCompare(ordre(y))).map(x => {
+        const debut = cumul; cumul += x.quantite;
+        const reste = Math.max(0, Math.min(x.quantite, cumul - s.vendu));
+        const lot = { x, reste, etat: s.vendu >= cumul ? "epuise" : s.vendu >= debut ? "encours" : "avenir", evol: prec && prec.puht ? x.puht / prec.puht - 1 : null };
+        prec = x; return lot;
+      });
+      const iCourant = lots.findIndex(l => l.etat === "encours"), lotCourant = iCourant >= 0 ? lots[iCourant] : lots.length && lots.every(l => l.etat === "epuise") ? lots[lots.length - 1] : null;
+      const lotPrec = lotCourant ? lots[lots.indexOf(lotCourant) - 1] : null, lotSuiv = lotCourant ? lots[lots.indexOf(lotCourant) + 1] : null;
+      const prixChange = !!(lotCourant && lotPrec && Math.abs(lotCourant.x.puht - lotPrec.x.puht) > 0.001 && s.a.prixRevuAchat !== lotCourant.x.id);
+      return { ...s, theorique, actuel, ecart, pmp, valeur: Math.max(actuel, 0) * pmp, lots, lotCourant, lotPrec, lotSuiv, prixChange };
     }).sort((x, y) => x.a.nom.localeCompare(y.a.nom, "fr"));
     const trimestres = [...tris.values()].sort((x, y) => (y.tri || "0").localeCompare(x.tri || "0"));
     C = { art, stock, trimestres, controles: [] };
     C.controles = controler();
     return C;
   }
+  const nomDevis = x => x.devis === "STOCK-JT" ? "stock apporté par John Taylor" : "devis " + x.devis;
+  const pctFr = v => v == null ? "" : (v > 0 ? "+" : "") + (v * 100).toFixed(1).replace(".", ",").replace(/,0$/, "") + " %";
   function controler() {
     const out = [], add = (type, grave, texte, cible) => out.push({ type, grave, texte, cible });
+    for (const s of C.stock) if (s.prixChange) add("Prix d'achat changé", false, s.a.nom + " : le stock acheté " + eur(s.lotPrec.x.puht) + " (" + nomDevis(s.lotPrec.x) + ") est terminé. Le stock en cours a été acheté " + eur(s.lotCourant.x.puht) + " (" + nomDevis(s.lotCourant.x) + ", " + pctFr(s.lotCourant.evol) + "). Prix de vente actuel : " + (s.a.prixActuel ? eur(s.a.prixActuel) : "non renseigné") + ", à actualiser si besoin.", { produit: s.a.id });
     const vus = new Map();
     for (const c of db.commandes) {
       const cible = { cmd: c.id }, nom = "Commande " + c.numero;
@@ -583,7 +598,8 @@ body.verrou .wrap { display: none; }
     for (const c of db.commandes) for (const l of c.lignes || []) if (l.articleId === a.id) lignes.push({ c, l });
     lignes.sort((x, y) => (y.c.date || y.c._tri || "").localeCompare(x.c.date || x.c._tri || ""));
     const comptees = lignes.filter(x => x.c.etat !== "Annulée");
-    const achats = db.achats.filter(x => x.articleId === a.id).sort((x, y) => (y.date || "").localeCompare(x.date || ""));
+    const ETAT_LOT = { epuise: "Terminé", encours: "En cours", avenir: "À venir" };
+    const verifier = async () => { if (await sauver("articles", { ...a, prixRevuAchat: s.lotCourant.x.id })) { fermer(); render(); toast("Prix de vente noté comme vérifié."); } };
     const mini = (v, l) => h("div", { class: "stat", style: "padding:10px 12px" }, h("span", { class: "v", style: "font-size:19px" }, v), h("span", { class: "l" }, l));
     panneau(a.nom, [
       h("div", { class: "art", style: "gap:16px;align-items:flex-start" }, vignette(a, 110), h("div", { style: "display:grid;gap:4px" },
@@ -592,9 +608,13 @@ body.verrou .wrap { display: none; }
         h("span", null, "Prix d'achat moyen du siège : ", h("b", null, s.pmp ? eur(s.pmp) : "aucun achat enregistré")),
         s.inv ? h("span", { class: "muted" }, "Dernier comptage : " + nb(s.inv.quantite) + " le " + dateFr(s.inv.date)) : null)),
       h("div", { class: "stats", style: "grid-template-columns:repeat(4,minmax(0,1fr));gap:8px" }, mini(nb(s.achete), "Acheté par le siège"), mini(nb(s.vendu), "Commandé par les agences"), mini(nb(s.actuel), "En stock"), mini(eur(s.valeur), "Montant restant")),
-      h("div", null, h("h2", { style: "margin-bottom:8px" }, "Achats du siège (" + achats.length + ")"),
-        achats.length ? table(["Date", "Devis", ">Qté", ">PU HT", ">Total HT"], achats.map(x => h("tr", null, h("td", { style: "white-space:nowrap" }, dateFr(x.date)), h("td", null, lienSellsy("devis", x.sellsyDevisId, x.devis)), h("td", { class: "r" }, nb(x.quantite)), h("td", { class: "r" }, eur(x.puht)), h("td", { class: "r" }, eur(x.totalHT)))),
-          h("tr", null, h("td", { colSpan: 2 }, "Total"), h("td", { class: "r" }, nb(s.achete)), h("td"), h("td", { class: "r" }, eur(s.valAchat))))
+      s.prixChange ? h("div", { class: "banner" }, "Le stock acheté " + eur(s.lotPrec.x.puht) + " est terminé : les ventes sortent maintenant du stock acheté " + eur(s.lotCourant.x.puht) + " (" + pctFr(s.lotCourant.evol) + "). Vérifiez le prix de vente (" + (a.prixActuel ? eur(a.prixActuel) : "non renseigné") + "). ",
+        h("button", { class: "btn small", onclick: verifier }, "Prix de vente vérifié")) : null,
+      !s.prixChange && s.lotCourant && s.lotSuiv && s.lotCourant.reste > 0 && Math.abs(s.lotSuiv.x.puht - s.lotCourant.x.puht) > 0.001 ? h("div", { class: "banner" }, "Encore " + nb(s.lotCourant.reste) + " unités du stock acheté " + eur(s.lotCourant.x.puht) + ". Ensuite, le stock aura été acheté " + eur(s.lotSuiv.x.puht) + " (" + pctFr(s.lotSuiv.evol) + ") : une alerte apparaîtra dans Contrôles pour actualiser le prix de vente.") : null,
+      h("div", null, h("h2", { style: "margin-bottom:8px" }, "Historique des achats du siège (" + s.lots.length + ")"),
+        s.lots.length ? table(["Date", "Devis", ">Qté", ">PU HT", ">Évolution", ">Total HT", "Stock de cet achat"], s.lots.map(({ x, reste, etat, evol }) => h("tr", null, h("td", { style: "white-space:nowrap" }, dateFr(x.date)), h("td", null, lienSellsy("devis", x.sellsyDevisId, x.devis)), h("td", { class: "r" }, nb(x.quantite)), h("td", { class: "r" }, eur(x.puht)),
+            h("td", { class: "r" + (evol > 0.0005 ? " neg" : "") }, evol == null || Math.abs(evol) < 0.0005 ? "" : pctFr(evol)), h("td", { class: "r" }, eur(x.totalHT)), h("td", null, ETAT_LOT[etat] + (etat === "encours" ? " (reste " + nb(reste) + ")" : "")))),
+          h("tr", null, h("td", { colSpan: 2 }, "Total"), h("td", { class: "r" }, nb(s.achete)), h("td", { class: "r" }, s.pmp ? eur(s.pmp) : ""), h("td"), h("td", { class: "r" }, eur(s.valAchat)), h("td")))
           : h("p", { class: "muted", style: "margin:0" }, "Aucun achat du siège enregistré : le stock de cet article part de zéro.")),
       h("div", null, h("h2", { style: "margin-bottom:8px" }, "Commandes des agences (" + comptees.length + ")"),
         lignes.length ? table(["Date", "N°", "Agence", ">Qté", ">PU HT", ">Total HT", "État"], lignes.map(({ c, l }) => h("tr", { class: "clic", title: "Ouvrir la commande", style: c.etat === "Annulée" ? "opacity:.55" : "", onclick: () => pCommande(c) },
@@ -767,14 +787,22 @@ body.verrou .wrap { display: none; }
     const par = new Map();
     for (const a of db.achats) { const g = par.get(a.devis) || { devis: a.devis, lib: a.libelleDevis || a.devis, lignes: [], total: 0 }; g.lignes.push(a); g.sellsy = g.sellsy || a.sellsyDevisId; g.total += a.totalHT; par.set(a.devis, g); }
     const groupes = [...par.values()];
+    const vue = state.achatsVue || "devis";
+    const multi = C.stock.filter(s => s.lots.length);
+    const parProduit = () => h("section", { class: "bloc" }, h("p", { class: "muted", style: "margin:0 0 10px;font-size:13px" }, "Cliquez sur un produit pour voir tous ses achats : dates, quantités et prix."),
+      table(["Article", ">Achats", ">Premier prix", ">Dernier prix", ">Évolution", ">Quantités achetées", "Stock en cours", ""], multi.map(s => { const p = s.lots[0].x, d = s.lots[s.lots.length - 1].x, ev = p.puht ? d.puht / p.puht - 1 : null;
+        return h("tr", { class: "clic", title: "Voir l'historique d'achat", onclick: () => pProduit(s) }, h("td", null, s.a.nom), h("td", { class: "r" }, String(s.lots.length)), h("td", { class: "r" }, eur(p.puht)), h("td", { class: "r" }, eur(d.puht)),
+          h("td", { class: "r" + (ev > 0.0005 ? " neg" : "") }, s.lots.length < 2 || ev == null || Math.abs(ev) < 0.0005 ? "" : pctFr(ev)), h("td", { class: "r" }, s.lots.map(l => nb(l.x.quantite)).join(" · ")),
+          h("td", null, s.lotCourant ? "Acheté " + eur(s.lotCourant.x.puht) : ""), h("td", null, s.prixChange ? h("span", { class: "neg" }, "Prix à vérifier") : "")); })));
     return [
       h("div", { class: "toolbar" }, h("span", { class: "muted", style: "font-size:13px" }, "Ce que le siège a commandé et payé : c'est ce qui crée le stock."), h("span", { class: "spacer" }),
         h("button", { class: "btn primary", onclick: () => pAchat(null) }, "+ Achat du siège")),
       h("div", { class: "stats" }, stat(eur(db.achats.reduce((s, a) => s + a.totalHT, 0)), "Total acheté par le siège (HT)"), stat(String(groupes.length), "Devis ou avenants"), stat(nb(db.achats.reduce((s, a) => s + a.quantite, 0)), "Unités entrées en stock"),
         stat(eur(C.stock.reduce((s, x) => s + x.valeur, 0)), "Valeur du stock restant")),
-      ...groupes.map(g => h("section", { class: "bloc" }, h("div", { class: "top" }, h("h3", null, lienSellsy("devis", g.sellsy, g.lib)), h("b", { class: "num" }, eur(g.total))),
+      h("div", { class: "tabs", role: "tablist", "aria-label": "Présentation des achats" }, [["devis", "Par devis"], ["produit", "Par produit"]].map(([k, l]) => h("button", { role: "tab", "aria-selected": String(k === vue), onclick: () => { state.achatsVue = k; render(); } }, l))),
+      ...(vue === "produit" ? [parProduit()] : groupes.map(g => h("section", { class: "bloc" }, h("div", { class: "top" }, h("h3", null, lienSellsy("devis", g.sellsy, g.lib)), h("b", { class: "num" }, eur(g.total))),
         table(["Article", "Date", ">Quantité", ">PU HT", ">Total HT"], g.lignes.map(a => h("tr", { class: "clic", onclick: () => pAchat(a) }, h("td", null, C.art.get(a.articleId)?.nom || h("span", { class: "neg" }, "Article inconnu")),
-          h("td", null, dateFr(a.date)), h("td", { class: "r" }, nb(a.quantite)), h("td", { class: "r" }, eur(a.puht)), h("td", { class: "r" }, eur(a.totalHT))))))),
+          h("td", null, dateFr(a.date)), h("td", { class: "r" }, nb(a.quantite)), h("td", { class: "r" }, eur(a.puht)), h("td", { class: "r" }, eur(a.totalHT)))))))),
     ];
   }
   function pAchat(a) {
@@ -860,7 +888,7 @@ body.verrou .wrap { display: none; }
   function vControles() {
     if (!C.controles.length) return [h("div", { class: "empty" }, h("strong", null, "Tout est en ordre"), "Aucune commande non facturée, aucun stock négatif, aucune rétrocession en retard.")];
     const par = new Map(); for (const c of C.controles) { const g = par.get(c.type) || []; g.push(c); par.set(c.type, g); }
-    const ouvrir = c => () => { if (c.cible.cmd) pCommande(db.commandes.find(x => x.id === c.cible.cmd)); else if (c.cible.stock) { state.stock.q = C.art.get(c.cible.stock).nom; state.stock.cat = ""; state.stock.vue = "suivi"; go("stock"); } else if (c.cible.retro) { state.retroTri = c.cible.retro; go("retro"); } };
+    const ouvrir = c => () => { if (c.cible.cmd) pCommande(db.commandes.find(x => x.id === c.cible.cmd)); else if (c.cible.produit) pProduit(C.stock.find(x => x.a.id === c.cible.produit)); else if (c.cible.stock) { state.stock.q = C.art.get(c.cible.stock).nom; state.stock.cat = ""; state.stock.vue = "suivi"; go("stock"); } else if (c.cible.retro) { state.retroTri = c.cible.retro; go("retro"); } };
     return [h("p", { class: "muted", style: "margin:0" }, C.controles.length + " points à vérifier. Cette liste se vide au fur et à mesure des corrections ; cliquez une ligne pour l'ouvrir."),
       ...[...par.entries()].map(([type, lst]) => h("section", { class: "bloc" }, h("div", { class: "top" }, h("h3", null, type), h("span", { class: "pill" + (lst[0].grave ? "" : " zero") }, lst.length)),
         table(["À vérifier"], lst.map(c => h("tr", { class: "clic", onclick: ouvrir(c) }, h("td", null, c.texte))))))];
