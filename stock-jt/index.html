@@ -438,6 +438,8 @@ body.verrou .wrap { display: none; }
   function controler() {
     const out = [], add = (type, grave, texte, cible) => out.push({ type, grave, texte, cible });
     for (const s of C.stock) if (s.prixChange) add("Prix d'achat changé", false, s.a.nom + " : le stock acheté " + eur(s.lotPrec.x.puht) + " (" + nomDevis(s.lotPrec.x) + ") est terminé. Le stock en cours a été acheté " + eur(s.lotCourant.x.puht) + " (" + nomDevis(s.lotCourant.x) + ", " + pctFr(s.lotCourant.evol) + "). Prix de vente actuel : " + (s.a.prixActuel ? eur(s.a.prixActuel) : "non renseigné") + ", à actualiser si besoin.", { produit: s.a.id });
+    const prixMini = new Map();
+    for (const x of db.achats) if (x.puht > 0) prixMini.set(x.articleId, Math.min(prixMini.get(x.articleId) ?? Infinity, x.puht));
     const vus = new Map();
     for (const c of db.commandes) {
       const cible = { cmd: c.id }, nom = "Commande " + c.numero;
@@ -450,6 +452,9 @@ body.verrou .wrap { display: none; }
       if (c.etat === "À facturer" && (age == null || age > (c.factureMensuelle ? JOURS_FACTURE_MENSUELLE : JOURS_FACTURE))) add("Commande non facturée", true, nom + " (" + eur(c._total) + ") n'est pas facturée" + (age != null ? " depuis " + age + " jours." : "."), cible);
       if (c.etat === "À régler" && age != null && age > JOURS_PAIEMENT) add("Facture non payée", false, nom + " (" + eur(c._total) + ") : facture " + (c.facture || "") + " à régler depuis " + age + " jours.", cible);
       if (c.etat !== "À facturer" && c.etat !== "Inconnu" && !c.facture && !c.factureNum && !c.retroExclue) add("Numéro de facture manquant", false, nom + " est marquée « " + c.etat + " » sans numéro de facture.", cible);
+      // Sans remise écrite sur la facture : produit vendu nettement sous le plus bas prix d'achat du siège.
+      const sousAchat = c.remiseSmartform || (c.sellsyDetail && c.sellsyDetail.remise) ? [] : (c.lignes || []).filter(l => l.quantite && l.puht > 0 && prixMini.get(l.articleId) && l.puht < prixMini.get(l.articleId) * 0.98);
+      if (sousAchat.length) add("Prix remisé à confirmer", false, nom + " : " + sousAchat.map(l => (C.art.get(l.articleId)?.nom || l.libelle) + " vendu " + eur(l.puht) + " (plus bas prix d'achat du siège : " + eur(prixMini.get(l.articleId)) + ")").join(", ") + ". Cochez « Remise Smartform » dans la commande si c'est normal.", cible);
       if (c.sellsyDetail && c.sellsyDetail.remise && !c.remiseSmartform) add("Prix remisé à confirmer", false, nom + " : la facture " + (c.sellsyDetail.facture || "") + " applique une remise sur " + c.sellsyDetail.lignes.filter(l => l.remise).map(l => l.libelle + " (" + eur(l.puht) + (l.prixAffiche ? " au lieu de " + eur(l.prixAffiche) : "") + ")").join(", ") + ". Cochez « Remise Smartform » dans la commande si c'est normal.", cible);
       if (c.sellsyDetail && c.sellsyDetail.type === "produits") {
         // Facture d'une seule commande : comparaison article par article sur le total (une facture peut compter en lots).

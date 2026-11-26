@@ -132,3 +132,4 @@ commande saisie sans détail reprend alors ses lignes de la facture. Le contrôl
 affiché tant que la case « Remise Smartform » (`remiseSmartform`) de la commande n'est pas cochée.
 
 Catalogue : la case « En ligne » (`enLigne` sur l'article) indique si le produit est encore proposé sur le site ; sans valeur, c'est la présence relevée sur le nouveau site (`surNouveauSite`) qui s'affiche.
+« Prix remisé à confirmer » s'affiche aussi quand un produit est vendu plus de 2 % sous le plus bas prix d'achat du siège, même sans remise écrite sur la facture.
