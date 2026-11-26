@@ -53,6 +53,10 @@ Photos : le champ `image` d'un article contient soit l'adresse de la photo du pr
 (fichier produit par `scripts/photos_woo.py` du dépôt `stock-john-taylor`, importé en mode « fusion »), soit
 une photo ajoutée à la main depuis la fiche de l'article, réduite à 480 px et enregistrée dans la fiche.
 
+Contrôle WooCommerce : le champ `stockWoo` d'un article (`suivi`, `quantite`, `etat`, `le`) est le relevé du
+stock déclaré sur le site, produit par `scripts/stock_woo.py` et importé en mode « fusion ». Le catalogue le
+compare au stock calculé par l'outil et l'onglet Contrôles signale les écarts.
+
 Sauvegardes : chaque modification est notée dans `stock_jt/base/journal` (qui, quand, fiche avant et après).
 Une copie complète des données est écrite dans `stock_jt/base/sauvegardes/<date>` (texte découpé dans la
 sous-collection `morceaux`) dans les 30 secondes qui suivent la dernière modification, avant chaque import et

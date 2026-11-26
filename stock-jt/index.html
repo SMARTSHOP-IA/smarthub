@@ -428,6 +428,14 @@ body.verrou .wrap { display: none; }
       if (s.actuel < 0) add("Stock négatif", true, s.a.nom + " : " + nb(s.actuel) + " en stock. Il manque un achat du siège, ou une commande est comptée en trop.", { stock: s.a.id });
       else if (s.ecart) add("Écart d'inventaire", false, s.a.nom + " : " + nb(s.inv.quantite) + " comptés le " + dateFr(s.inv.date) + " pour " + nb(s.inv.quantite - s.ecart) + " attendus (" + (s.ecart > 0 ? "+" : "") + nb(s.ecart) + ").", { stock: s.a.id });
     }
+    // Rapprochement avec le site : stockWoo = relevé du stock déclaré par WooCommerce (import « fusion »).
+    for (const s of C.stock) {
+      const w = s.a.stockWoo; if (!w) continue;
+      const le = w.le ? " (relevé du " + dateFr(w.le) + ")" : "";
+      if (w.suivi && w.quantite !== s.actuel) add("Écart avec le stock WooCommerce", true, s.a.nom + " : " + nb(s.actuel) + " dans l'outil, " + nb(w.quantite) + " déclarés sur le site" + le + ".", { stock: s.a.id });
+      else if (!w.suivi && w.etat === "instock" && s.actuel <= 0) add("En vente sur le site sans stock", true, s.a.nom + " : le site le propose à la commande alors que le stock de l'outil est à " + nb(s.actuel) + le + ".", { stock: s.a.id });
+      else if (!w.suivi && w.etat === "outofstock" && s.actuel > 0) add("En rupture sur le site avec du stock", false, s.a.nom + " : le site l'affiche en rupture alors qu'il en reste " + nb(s.actuel) + le + ".", { stock: s.a.id });
+    }
     for (const t of C.trimestres) {
       if (!t.tri) continue;
       const reste = r2(t.total - t.verse);
@@ -498,7 +506,7 @@ body.verrou .wrap { display: none; }
     const alerte = C.stock.filter(x => x.actuel < 0 || (x.achete && x.actuel <= x.achete * SEUIL_BAS)).length;
     return [
       h("div", { class: "stats" }, stat(eur(C.stock.reduce((t, x) => t + x.valeur, 0)), "Montant du stock restant, au prix d'achat du siège"),
-        stat(eur(vente), "Montant du stock restant, au prix de vente HT" + (sansPrix ? " (" + sansPrix + " article(s) sans prix de vente)" : "")),
+        stat(eur(vente), "Ce que vaudrait ce stock vendu aux agences, au prix de vente HT" + (sansPrix ? " (" + sansPrix + " articles sans prix de vente comptés pour zéro)" : "")),
         stat(nb(pos.reduce((t, x) => t + x.actuel, 0)), "Unités en stock, sur " + pos.length + " articles"),
         stat(String(alerte), "Articles épuisés, presque épuisés ou en négatif", alerte ? "alerte" : "ok")),
       h("div", { class: "toolbar" },
@@ -537,16 +545,16 @@ body.verrou .wrap { display: none; }
         h("span", null, "Prix d'achat moyen du siège : ", h("b", null, s.pmp ? eur(s.pmp) : "aucun achat enregistré")),
         s.inv ? h("span", { class: "muted" }, "Dernier comptage : " + nb(s.inv.quantite) + " le " + dateFr(s.inv.date)) : null)),
       h("div", { class: "stats", style: "grid-template-columns:repeat(4,minmax(0,1fr));gap:8px" }, mini(nb(s.achete), "Acheté par le siège"), mini(nb(s.vendu), "Commandé par les agences"), mini(nb(s.actuel), "En stock"), mini(eur(s.valeur), "Montant restant")),
+      h("div", null, h("h2", { style: "margin-bottom:8px" }, "Achats du siège (" + achats.length + ")"),
+        achats.length ? table(["Date", "Devis", ">Qté", ">PU HT", ">Total HT"], achats.map(x => h("tr", null, h("td", { style: "white-space:nowrap" }, dateFr(x.date)), h("td", null, x.devis || "—"), h("td", { class: "r" }, nb(x.quantite)), h("td", { class: "r" }, eur(x.puht)), h("td", { class: "r" }, eur(x.totalHT)))),
+          h("tr", null, h("td", { colSpan: 2 }, "Total"), h("td", { class: "r" }, nb(s.achete)), h("td"), h("td", { class: "r" }, eur(s.valAchat))))
+          : h("p", { class: "muted", style: "margin:0" }, "Aucun achat du siège enregistré : le stock de cet article part de zéro.")),
       h("div", null, h("h2", { style: "margin-bottom:8px" }, "Commandes des agences (" + comptees.length + ")"),
         lignes.length ? table(["Date", "N°", "Agence", ">Qté", ">PU HT", ">Total HT", "État"], lignes.map(({ c, l }) => h("tr", { class: "clic", title: "Ouvrir la commande", style: c.etat === "Annulée" ? "opacity:.55" : "", onclick: () => pCommande(c) },
           h("td", { style: "white-space:nowrap" }, c.date ? dateFr(c.date) : h("span", { class: "muted" }, triFr(c._tri))), h("td", null, c.numero, l.libelle && l.libelle !== a.nom ? h("span", { class: "sub" }, l.libelle) : null), h("td", null, c.agence || c.ville || "—", c.factureA ? h("span", { class: "sub" }, c.factureA) : null),
           h("td", { class: "r" }, nb(l.quantite)), h("td", { class: "r" }, eur(l.puht)), h("td", { class: "r" }, eur(l.totalHT)), h("td", null, etatEl(c.etat)))),
           h("tr", null, h("td", { colSpan: 3 }, "Total hors commandes annulées"), h("td", { class: "r" }, nb(comptees.reduce((t, x) => t + (x.l.quantite || 0), 0))), h("td"), h("td", { class: "r" }, eur(comptees.reduce((t, x) => t + (x.l.totalHT || 0), 0))), h("td")))
           : h("p", { class: "muted", style: "margin:0" }, "Aucune commande pour cet article.")),
-      h("div", null, h("h2", { style: "margin-bottom:8px" }, "Achats du siège (" + achats.length + ")"),
-        achats.length ? table(["Date", "Devis", ">Qté", ">PU HT", ">Total HT"], achats.map(x => h("tr", null, h("td", { style: "white-space:nowrap" }, dateFr(x.date)), h("td", null, x.devis || "—"), h("td", { class: "r" }, nb(x.quantite)), h("td", { class: "r" }, eur(x.puht)), h("td", { class: "r" }, eur(x.totalHT)))),
-          h("tr", null, h("td", { colSpan: 2 }, "Total"), h("td", { class: "r" }, nb(s.achete)), h("td"), h("td", { class: "r" }, eur(s.valAchat))))
-          : h("p", { class: "muted", style: "margin:0" }, "Aucun achat du siège enregistré : le stock de cet article part de zéro.")),
     ], [["Compter le stock", () => pInventaire(s)], ["Modifier la fiche", () => pArticle(a)]]);
   }
   function pInventaire(s) {
@@ -722,10 +730,14 @@ body.verrou .wrap { display: none; }
       onchange: async e => { const v = e.target.checked; if (await sauver("articles", { ...a, [k]: v }, a.nom + " : " + (k === "enStock" ? (v ? "suivi en stock" : "retiré du stock") : (v ? "à rétrocéder" : "non rétrocédé")) + ".")) render(); else e.target.checked = !v; } });
     const arts = [...db.articles].sort((a, b) => a.categorie.localeCompare(b.categorie, "fr") || a.nom.localeCompare(b.nom, "fr"));
     return [
-      h("div", { class: "toolbar" }, h("span", { class: "muted", style: "font-size:13px" }, "Les articles cochés « en stock » sont suivis ; ceux cochés « à rétrocéder » entrent dans la rétrocession. Les prix et les photos viennent du catalogue WooCommerce du nouveau site ; pour un article qui n'y est pas, ajoutez la photo avec « Modifier »."), h("span", { class: "spacer" }),
+      h("div", { class: "toolbar" }, h("span", { class: "muted", style: "font-size:13px" }, "Les articles cochés « en stock » sont suivis ; ceux cochés « à rétrocéder » entrent dans la rétrocession. Le stock restant est calculé par l'outil : achats du siège moins commandes des agences. La colonne « Stock WooCommerce » le compare au stock déclaré sur le site lors du dernier relevé. Les prix et les photos viennent du catalogue WooCommerce du nouveau site ; pour un article qui n'y est pas, ajoutez la photo avec « Modifier »."), h("span", { class: "spacer" }),
         h("button", { class: "btn primary", onclick: () => pArticle(null) }, "+ Article")),
-      table(["Article", "Catégorie", "En stock", "À rétrocéder", ">Prix de vente HT", ">PU achat siège", "Nouveau site", ""], arts.map(a => { const s = C.stock.find(x => x.a.id === a.id);
+      table(["Article", "Catégorie", "En stock", "À rétrocéder", ">Stock restant", ">Stock WooCommerce", ">Prix de vente HT", ">PU achat siège", "Nouveau site", ""], arts.map(a => { const s = C.stock.find(x => x.a.id === a.id), w = a.stockWoo;
+        const ecart = s && w && (w.suivi ? w.quantite !== s.actuel : (w.etat === "instock" ? s.actuel <= 0 : s.actuel > 0));
+        const celWoo = !w ? h("span", { class: "muted" }, "—") : w.suivi ? [h("span", { class: ecart ? "neg" : "" }, nb(w.quantite)), h("span", { class: "sub" }, ecart ? "écart de " + nb(w.quantite - s.actuel) : "identique")]
+          : [h("span", { class: "tag" }, "non suivi"), h("span", { class: "sub", style: ecart ? "color:var(--magenta)" : "" }, w.etat === "outofstock" ? "en rupture" : "en vente")];
         return h("tr", null, h("td", null, h("div", { class: "art" }, vignette(a, 52), h("span", null, a.nom))), h("td", null, a.categorie), h("td", null, bascule(a, "enStock")), h("td", null, bascule(a, "aRetroceder")),
+          h("td", { class: "r " + (s && s.actuel < 0 ? "neg" : "") }, s ? h("b", null, nb(s.actuel)) : h("span", { class: "muted" }, "—")), h("td", { class: "r", title: w && w.le ? "Relevé du " + dateFr(w.le) : "" }, celWoo),
           h("td", { class: "r" }, a.prixActuel ? eur(a.prixActuel) : h("span", { class: "muted" }, "—")), h("td", { class: "r" }, s && s.pmp ? eur(s.pmp) : h("span", { class: "muted" }, "—")),
           h("td", null, (a.woo || []).length ? (a.woo || []).map(w => h("a", { href: w.lien, target: "_blank", rel: "noopener", style: "color:inherit;display:block" }, w.nom)) : h("span", { class: "tag" }, "absent")),
           h("td", { class: "r" }, h("button", { class: "btn small", onclick: () => pArticle(a) }, "Modifier"))); })),
