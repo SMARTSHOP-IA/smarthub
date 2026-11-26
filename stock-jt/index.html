@@ -523,7 +523,7 @@ body.verrou .wrap { display: none; }
       && (!q || slug([c.numero, c.agence, c.contact, c.factureA, c.facture, c.ville, (c.lignes || []).map(l => l.libelle).join(" ")].join(" ")).includes(q)))
       .sort((a, b) => (b._tri || "9").localeCompare(a._tri || "9") || (b.date || "").localeCompare(a.date || ""));
     const tot = rows.reduce((s, c) => s + c._total, 0), totR = rows.reduce((s, c) => s + c._retro, 0);
-    const sel = (lbl, key, opts) => h("select", { "aria-label": lbl, onchange: e => { f[key] = e.target.value; render(); } }, h("option", { value: "" }, lbl), opts.map(o => h("option", { value: o[0] ?? o, selected: (o[0] ?? o) === f[key] }, o[1] ?? o)));
+    const sel = (lbl, key, opts) => h("select", { "aria-label": lbl, onchange: e => { f[key] = e.target.value; render(); } }, h("option", { value: "" }, lbl), opts.map(o => Array.isArray(o) ? o : [o, o]).map(([v, t]) => h("option", { value: v, selected: v === f[key] }, t)));
     return [
       h("div", { class: "toolbar" },
         h("input", { type: "search", placeholder: "N° de commande, agence, facture, produit…", value: f.q, "aria-label": "Chercher une commande", onchange: e => { f.q = e.target.value; render(); } }),
