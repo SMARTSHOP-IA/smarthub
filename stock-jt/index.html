@@ -419,7 +419,8 @@ body.verrou .wrap { display: none; }
       });
       const iCourant = lots.findIndex(l => l.etat === "encours"), lotCourant = iCourant >= 0 ? lots[iCourant] : lots.length && lots.every(l => l.etat === "epuise") ? lots[lots.length - 1] : null;
       const lotPrec = lotCourant ? lots[lots.indexOf(lotCourant) - 1] : null, lotSuiv = lotCourant ? lots[lots.indexOf(lotCourant) + 1] : null;
-      const prixChange = !!(lotCourant && lotPrec && Math.abs(lotCourant.x.puht - lotPrec.x.puht) > 0.001 && s.a.prixRevuAchat !== lotCourant.x.id);
+      // Alerte seulement si le prix de vente n'a pas déjà suivi : chez John Taylor le prix de vente reprend le prix d'achat du siège.
+      const prixChange = !!(lotCourant && lotPrec && Math.abs(lotCourant.x.puht - lotPrec.x.puht) > 0.001 && s.a.prixRevuAchat !== lotCourant.x.id && s.a.prixActuel && Math.abs(s.a.prixActuel - lotCourant.x.puht) > 0.001);
       return { ...s, theorique, actuel, ecart, pmp, valeur: Math.max(actuel, 0) * pmp, lots, lotCourant, lotPrec, lotSuiv, prixChange };
     }).sort((x, y) => x.a.nom.localeCompare(y.a.nom, "fr"));
     const trimestres = [...tris.values()].sort((x, y) => (y.tri || "0").localeCompare(x.tri || "0"));
