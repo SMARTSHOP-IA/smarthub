@@ -600,28 +600,32 @@ body.verrou .wrap { display: none; }
     const T = C.trimestres;
     const tot = k => T.reduce((s, t) => s + t[k], 0);
     const sel = state.retroTri != null ? T.find(t => t.tri === state.retroTri) : null;
+    const detail = t => {
+      const cmds = db.commandes.filter(c => c._tri === t.tri && c.etat !== "Annulée").sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+      return h("tr", { id: "detailTri" }, h("td", { colSpan: 9, style: "padding:14px;background:var(--bg)" }, h("section", { class: "bloc" },
+        h("div", { class: "top" }, h("h3", null, "Factures de " + triFr(t.tri) + " (" + cmds.length + " commandes)"), h("button", { class: "btn small", onclick: () => { state.retroTri = null; render(); } }, "Fermer")),
+        cmds.length ? table(["N°", "Date", "Agence", "Facturé à", "Facture", "État", ">À rétrocéder"], cmds.map(c => h("tr", { class: "clic", onclick: () => pCommande(c) },
+          h("td", null, c.numero), h("td", null, dateFr(c.date)), h("td", null, c.agence || "—"), h("td", null, c.factureA || "—"), h("td", null, c.facture || c.factureNum || "—"), h("td", null, etatEl(c.etat)),
+          h("td", { class: "r" }, c.retroExclue ? h("span", { class: "tag" }, "exclue") : eur(c._retro)))))
+          : h("p", { class: "muted", style: "margin:0" }, "Aucune commande sur ce trimestre."))));
+    };
     const out = [
       h("div", { class: "stats" }, stat(eur(tot("total")), "Total à rétrocéder depuis le début"), stat(eur(tot("verse")), "Déjà reversé au siège"),
         stat(eur(tot("total") - tot("verse")), "Reste à reverser", tot("total") - tot("verse") > 0.5 ? "alerte" : "ok"), stat(eur(tot("aRegler") + tot("aFacturer")), "Pas encore encaissé (à régler ou à facturer)")),
       h("div", { class: "toolbar" }, h("span", { class: "muted", style: "font-size:13px" }, "Lignes produits HT, hors frais de port, des articles marqués « à rétrocéder ». Cliquez un trimestre pour voir ses factures."), h("span", { class: "spacer" }),
         h("button", { class: "btn", onclick: () => exporterCsv("retrocession-john-taylor.csv", [["Trimestre", "Commandes", "À rétrocéder", "Factures réglées", "À régler", "À facturer", "État inconnu", "Versé", "Reste dû"],
           ...T.map(t => [triFr(t.tri), t.n, r2(t.total), r2(t.regle), r2(t.aRegler), r2(t.aFacturer), r2(t.autre), r2(t.verse), r2(t.total - t.verse)])]) }, "Exporter")),
-      table(["Trimestre", ">Commandes", ">À rétrocéder", ">Factures réglées", ">À régler", ">À facturer", ">Versé au siège", ">Reste dû", ""], T.map(t =>
-        h("tr", { class: "clic", style: sel === t ? "background:var(--hover)" : "", onclick: () => { state.retroTri = sel === t ? null : t.tri; render(); } },
-          h("td", null, h("b", null, triFr(t.tri))), h("td", { class: "r" }, t.n), h("td", { class: "r" }, eur(t.total)), h("td", { class: "r" }, eur(t.regle)),
+      table(["Trimestre", ">Commandes", ">À rétrocéder", ">Factures réglées", ">À régler", ">À facturer", ">Versé au siège", ">Reste dû", ""], T.flatMap(t => [
+        h("tr", { class: "clic", "aria-expanded": String(sel === t), title: sel === t ? "Masquer les factures" : "Voir les factures du trimestre", style: sel === t ? "background:var(--hover)" : "",
+          onclick: () => { state.retroTri = sel === t ? null : t.tri; render(); document.getElementById("detailTri")?.scrollIntoView({ block: "nearest", behavior: "smooth" }); } },
+          h("td", null, h("b", null, (sel === t ? "▾ " : "▸ ") + triFr(t.tri))), h("td", { class: "r" }, t.n), h("td", { class: "r" }, eur(t.total)), h("td", { class: "r" }, eur(t.regle)),
           h("td", { class: "r " + (t.aRegler ? "bas" : "") }, eur(t.aRegler)), h("td", { class: "r " + (t.aFacturer ? "neg" : "") }, eur(t.aFacturer + t.autre)),
           h("td", { class: "r" }, eur(t.verse)), h("td", { class: "r " + (t.total - t.verse > 0.5 ? "neg" : "") }, eur(t.total - t.verse)),
-          h("td", { class: "r" }, t.tri ? h("button", { class: "btn small", onclick: e => { e.stopPropagation(); pVersement(t); } }, "Versement") : null))),
+          h("td", { class: "r" }, t.tri ? h("button", { class: "btn small", onclick: e => { e.stopPropagation(); pVersement(t); } }, "Versement") : null)),
+        sel === t ? detail(t) : null]).filter(Boolean),
         h("tr", null, h("td", null, "Total"), h("td", { class: "r" }, tot("n")), h("td", { class: "r" }, eur(tot("total"))), h("td", { class: "r" }, eur(tot("regle"))), h("td", { class: "r" }, eur(tot("aRegler"))),
           h("td", { class: "r" }, eur(tot("aFacturer") + tot("autre"))), h("td", { class: "r" }, eur(tot("verse"))), h("td", { class: "r" }, eur(tot("total") - tot("verse"))), h("td"))),
     ];
-    if (sel) {
-      const cmds = db.commandes.filter(c => c._tri === sel.tri && c.etat !== "Annulée").sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-      out.push(h("section", { class: "bloc" }, h("h3", null, "Factures de " + triFr(sel.tri)),
-        table(["N°", "Date", "Agence", "Facturé à", "Facture", "État", ">À rétrocéder"], cmds.map(c => h("tr", { class: "clic", onclick: () => pCommande(c) },
-          h("td", null, c.numero), h("td", null, dateFr(c.date)), h("td", null, c.agence || "—"), h("td", null, c.factureA || "—"), h("td", null, c.facture || c.factureNum || "—"), h("td", null, etatEl(c.etat)),
-          h("td", { class: "r" }, c.retroExclue ? h("span", { class: "tag" }, "exclue") : eur(c._retro)))))));
-    }
     return out;
   }
   function pVersement(t) {
