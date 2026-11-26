@@ -429,8 +429,16 @@ body.verrou .wrap { display: none; }
       if (c.etat === "À facturer" && (age == null || age > (c.factureMensuelle ? JOURS_FACTURE_MENSUELLE : JOURS_FACTURE))) add("Commande non facturée", true, nom + " (" + eur(c._total) + ") n'est pas facturée" + (age != null ? " depuis " + age + " jours." : "."), cible);
       if (c.etat === "À régler" && age != null && age > JOURS_PAIEMENT) add("Facture non payée", false, nom + " (" + eur(c._total) + ") : facture " + (c.facture || "") + " à régler depuis " + age + " jours.", cible);
       if (c.etat !== "À facturer" && c.etat !== "Inconnu" && !c.facture && !c.factureNum && !c.retroExclue) add("Numéro de facture manquant", false, nom + " est marquée « " + c.etat + " » sans numéro de facture.", cible);
+      if (c.sellsyDetail) {
+        const sd = c.sellsyDetail, simple = t => String(t || "").normalize("NFD").replace(/[^a-zA-Z0-9]+/g, "").toLowerCase();
+        const qF = (sd.lignes || []).map(l => l.quantite).filter(q => q != null).sort((a, b) => a - b), qO = (c.lignes || []).map(l => Number(l.quantite) || 0).filter(q => q).sort((a, b) => a - b);
+        const reste = qF.slice(), absentes = qO.filter(q => { const i = reste.indexOf(q); if (i < 0) return true; reste.splice(i, 1); return false; });
+        if (qF.length && qF.length === sd.lignes.length && absentes.length) add("Quantités différentes de la facture", true, nom + " : la facture " + (sd.facture || "") + " indique " + (sd.lignes || []).map(l => l.libelle + " x " + l.quantite).join(", ") + ".", cible);
+        const aF = simple(sd.agence), aO = simple(c.agence);
+        if (aF && aO && !aF.includes(aO) && !aO.includes(aF)) add("Agence différente sur la facture", false, nom + " : « " + c.agence + " » dans l'outil, « " + sd.agence + " » sur la facture " + (sd.facture || "") + ".", cible);
+      }
       if (c.importAuto && c.monday && c.monday.present === false && (age == null || age >= 1)) add("Commande absente de Monday", false, nom + " vient du nouveau site mais n'a pas été trouvée sur les tableaux Monday John Taylor.", cible);
-      if (c.importAuto && c.sellsyMontantHT != null && !c.lignesHorsCatalogue && Math.abs(c.sellsyMontantHT - c._total) > 0.01) add("Écart avec la facture Sellsy", true, nom + " : " + eur(c._total) + " de produits dans l'outil, " + eur(c.sellsyMontantHT) + " hors port sur la facture " + (c.facture || "") + ".", cible);
+      if ((c.importAuto || c.sellsyDetail) && c.sellsyMontantHT != null && !c.lignesHorsCatalogue && Math.abs(c.sellsyMontantHT - c._total) > 0.01) add("Écart avec la facture Sellsy", true, nom + " : " + eur(c._total) + " de produits dans l'outil, " + eur(c.sellsyMontantHT) + " hors port sur la facture " + (c.facture || "") + ".", cible);
       if (c.ecartSite) add("Écart site / facture", false, nom + " : " + eur(c.ecartSite.site) + " sur le site, " + eur(c.ecartSite.facture) + " facturés. Les lignes suivent la facture.", cible);
     }
     for (const s of C.stock) {
@@ -671,6 +679,7 @@ body.verrou .wrap { display: none; }
     panneau(neuf ? "Nouvelle commande manuelle" : "Commande " + c.numero, [
       c?.importAuto ? h("div", { class: "banner" }, "Commande reprise automatiquement du nouveau site" + (c.lignesHorsCatalogue ? " (" + c.lignesHorsCatalogue + " ligne(s) hors catalogue non reprise(s))" : "") + (c.factureMensuelle ? ". Agence affiliée : la commande sera reprise sur la facture mensuelle de JOHN TAYLOR SA, qui est recherchée toutes les heures (lien Monday ou objet de la facture)." : ". La facture Sellsy et son état sont mis à jour toutes les heures tant qu'elle n'est pas réglée.")
         + (c.monday ? (c.monday.present ? " Présente sur Monday." : " Non trouvée sur Monday.") : "")) : null,
+      c?.sellsyDetail ? h("div", { class: "banner" }, "Sur la facture Sellsy " + (c.sellsyDetail.facture || "") + (c.sellsyDetail.agence ? " (agence " + c.sellsyDetail.agence + ")" : "") + " : " + (c.sellsyDetail.lignes || []).map(l => l.libelle + (l.quantite != null ? " x " + l.quantite : "")).join(", ") + (c.sellsyMontantHT != null ? ", soit " + eur(c.sellsyMontantHT) + " hors port." : ".")) : null,
       c?.ecartSite ? h("div", { class: "banner" }, "Le site indiquait " + eur(c.ecartSite.site) + " et la facture " + eur(c.ecartSite.facture) + " : les lignes ont été ajustées sur la facture.") : null,
       c?.montantsEstimes ? h("div", { class: "banner" }, "Commande reprise du tableau de gestion : le total est celui de la facture, mais sa répartition par ligne est estimée. Corrigez les lignes si besoin.") : null,
       h("div", { class: "fields" },

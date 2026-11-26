@@ -109,3 +109,8 @@ Factures : une filiale paie avant expédition, sa facture cite le numéro de com
 sur JOHN TAYLOR SA) est marquée `factureMensuelle: true` : sa commande est reprise sur une facture mensuelle groupée,
 attendue sous 45 jours au lieu de 30, et le montant de cette facture n'est pas comparé à la commande. Le lien de
 facture saisi sur Monday, quand la colonne existe, passe avant la recherche par objet.
+
+Factures détaillées par commande : quand une ligne de facture Sellsy porte en référence un numéro de commande
+(facture mensuelle de JOHN TAYLOR SA), la tâche horaire reporte sur la commande `sellsyMontantHT` (total de la ligne,
+hors port) et `sellsyDetail` (`agence` du titre de section, `lignes` produits et quantités, `facture`). L'onglet
+Contrôles compare alors le montant, les quantités et l'agence ; les lignes de la commande ne sont jamais modifiées.
