@@ -106,6 +106,11 @@ td .sub { color: var(--muted); font-size: 12.5px; display: block; }
 .vig { display: inline-grid; place-items: center; position: relative; flex: none; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); color: var(--muted); font: 600 14px var(--display); overflow: hidden; vertical-align: middle; }
 .vig img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #fff; }
 .art { display: flex; gap: 10px; align-items: center; min-width: 0; }
+/* Tableau resserré : titres sur deux lignes, pour tenir dans la largeur sans défilement. */
+.compact th { white-space: pre-line; line-height: 1.25; vertical-align: bottom; padding: 8px; letter-spacing: .04em; }
+.compact td { padding: 8px; }
+.compact td.r { white-space: normal; }
+.compact td.r > b, .compact td.r > span:not(.sub) { white-space: nowrap; }
 .neg { color: var(--magenta); font-weight: 600; }
 .bas { color: var(--warn); font-weight: 600; }
 .etat { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; white-space: nowrap; }
@@ -732,15 +737,15 @@ body.verrou .wrap { display: none; }
     return [
       h("div", { class: "toolbar" }, h("span", { class: "muted", style: "font-size:13px" }, "Les articles cochés « en stock » sont suivis ; ceux cochés « à rétrocéder » entrent dans la rétrocession. Le stock restant est calculé par l'outil : achats du siège moins commandes des agences. La colonne « Stock WooCommerce » le compare au stock déclaré sur le site lors du dernier relevé. Les prix et les photos viennent du catalogue WooCommerce du nouveau site ; pour un article qui n'y est pas, ajoutez la photo avec « Modifier »."), h("span", { class: "spacer" }),
         h("button", { class: "btn primary", onclick: () => pArticle(null) }, "+ Article")),
-      table(["Article", "Catégorie", "En stock", "À rétrocéder", ">Stock restant", ">Stock WooCommerce", ">Prix de vente HT", ">PU achat siège", "Nouveau site", ""], arts.map(a => { const s = C.stock.find(x => x.a.id === a.id), w = a.stockWoo;
+      h("div", { class: "compact" }, table(["Article", "En\nstock", "À rétro-\ncéder", ">Stock\nrestant", ">Stock\nWooCommerce", ">Prix de\nvente HT", ">PU achat\nsiège", "Nouveau\nsite", ""], arts.map(a => { const s = C.stock.find(x => x.a.id === a.id), w = a.stockWoo;
         const ecart = s && w && (w.suivi ? w.quantite !== s.actuel : (w.etat === "instock" ? s.actuel <= 0 : s.actuel > 0));
         const celWoo = !w ? h("span", { class: "muted" }, "—") : w.suivi ? [h("span", { class: ecart ? "neg" : "" }, nb(w.quantite)), h("span", { class: "sub" }, ecart ? "écart de " + nb(w.quantite - s.actuel) : "identique")]
           : [h("span", { class: "tag" }, "non suivi"), h("span", { class: "sub", style: ecart ? "color:var(--magenta)" : "" }, w.etat === "outofstock" ? "en rupture" : "en vente")];
-        return h("tr", null, h("td", null, h("div", { class: "art" }, vignette(a, 52), h("span", null, a.nom))), h("td", null, a.categorie), h("td", null, bascule(a, "enStock")), h("td", null, bascule(a, "aRetroceder")),
+        return h("tr", null, h("td", null, h("div", { class: "art" }, vignette(a, 44), h("div", null, a.nom, h("span", { class: "sub" }, a.categorie)))), h("td", null, bascule(a, "enStock")), h("td", null, bascule(a, "aRetroceder")),
           h("td", { class: "r " + (s && s.actuel < 0 ? "neg" : "") }, s ? h("b", null, nb(s.actuel)) : h("span", { class: "muted" }, "—")), h("td", { class: "r", title: w && w.le ? "Relevé du " + dateFr(w.le) : "" }, celWoo),
           h("td", { class: "r" }, a.prixActuel ? eur(a.prixActuel) : h("span", { class: "muted" }, "—")), h("td", { class: "r" }, s && s.pmp ? eur(s.pmp) : h("span", { class: "muted" }, "—")),
-          h("td", null, (a.woo || []).length ? (a.woo || []).map(w => h("a", { href: w.lien, target: "_blank", rel: "noopener", style: "color:inherit;display:block" }, w.nom)) : h("span", { class: "tag" }, "absent")),
-          h("td", { class: "r" }, h("button", { class: "btn small", onclick: () => pArticle(a) }, "Modifier"))); })),
+          h("td", null, (a.woo || []).length ? (a.woo || []).map((w, n, l) => h("a", { href: w.lien, target: "_blank", rel: "noopener", title: w.nom, style: "color:inherit;display:block;white-space:nowrap" }, l.length > 1 ? "voir " + (n + 1) : "voir")) : h("span", { class: "tag" }, "absent")),
+          h("td", { class: "r" }, h("button", { class: "btn small", onclick: () => pArticle(a) }, "Modifier"))); }))),
     ];
   }
   function pArticle(a) {
