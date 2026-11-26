@@ -104,3 +104,8 @@ moins un article du catalogue (fiche `site-<numéro>`, `importAuto: true`, ligne
 Elle ne modifie plus les lignes ensuite : elle tient à jour la facture Sellsy (`facture`, `sellsyFactureId`,
 `etat`, `sellsyMontantHT`), la présence sur Monday (`monday.present`) et l'annulation sur le site. L'onglet
 Contrôles signale une commande absente de Monday ou un montant différent de la facture.
+
+Factures : une filiale paie avant expédition, sa facture cite le numéro de commande. Une agence affiliée (facturée
+sur JOHN TAYLOR SA) est marquée `factureMensuelle: true` : sa commande est reprise sur une facture mensuelle groupée,
+attendue sous 45 jours au lieu de 30, et le montant de cette facture n'est pas comparé à la commande. Le lien de
+facture saisi sur Monday, quand la colonne existe, passe avant la recherche par objet.
