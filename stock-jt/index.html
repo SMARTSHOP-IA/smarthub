@@ -236,7 +236,7 @@ body.verrou .wrap { display: none; }
   // ------------------------------------------------------------ Stockage
   const db = Object.fromEntries(COLS.map(c => [c, []])); db.acces = [];
   const state = { tab: location.hash.slice(1) || "synthese", me: null, refus: false, loaded: false,
-    cmd: { q: "", tri: "", etat: "", source: "" }, stock: { q: "", cat: "" }, retroTri: null };
+    cmd: { q: "", tri: "", etat: "", source: "" }, stock: { q: "", cat: "", vue: "theorique" }, retroTri: null };
   let fs = null;
   const store = LOCAL ? {
     async load() { const d = JSON.parse(localStorage.getItem("stockjt-local") || "{}"); for (const c of [...COLS, "acces"]) db[c] = d[c] || []; },
@@ -450,7 +450,7 @@ body.verrou .wrap { display: none; }
   }
 
   // ------------------------------------------------------------ Rendu
-  const TABS = [["synthese", "Synthèse"], ["stock", "Stock"], ["commandes", "Commandes"], ["retro", "Rétrocession"],
+  const TABS = [["synthese", "Synthèse"], ["stock", "Inventaires"], ["commandes", "Commandes"], ["retro", "Rétrocession"],
     ["achats", "Achats du siège"], ["catalogue", "Catalogue"], ["agences", "Agences"], ["controles", "Contrôles"], ["reglages", "Réglages"]];
   function go(tab) { state.tab = tab; history.replaceState(null, "", "#" + tab); render(); window.scrollTo({ top: 0 }); }
   function render() {
@@ -485,7 +485,7 @@ body.verrou .wrap { display: none; }
     const bas = C.stock.filter(s => s.achete && s.actuel <= s.achete * SEUIL_BAS).sort((a, b) => a.actuel - b.actuel).slice(0, 8);
     return [
       h("div", { class: "stats" },
-        stat(eur(valeur), "Valeur du stock restant (prix d'achat siège)", "", () => go("stock")),
+        stat(eur(valeur), "Valeur du stock restant (prix d'achat siège)", "", () => { state.stock.vue = "suivi"; go("stock"); }),
         stat(eur(reste), "Rétrocession restant à reverser", reste > 0.5 ? "alerte" : "ok", () => go("retro")),
         stat(eur(aRegler), "Factures en attente de règlement", "", () => { state.cmd.etat = "À régler"; go("commandes"); }),
         stat(String(C.controles.length), "Points à vérifier" + (aFact.length ? ", dont " + aFact.length + " commande(s) non facturée(s)" : ""), C.controles.length ? "alerte" : "ok", () => go("controles"))),
@@ -495,46 +495,75 @@ body.verrou .wrap { display: none; }
             h("tr", { class: "clic", onclick: () => { state.retroTri = t.tri; go("retro"); } }, h("td", null, triFr(t.tri)), h("td", { class: "r" }, eur(t.total)), h("td", { class: "r" }, eur(t.verse)),
               h("td", { class: "r " + (t.total - t.verse > 0.5 ? "neg" : "") }, eur(t.total - t.verse)))))),
         h("section", { class: "bloc" }, h("h2", null, "Stocks les plus bas"),
-          bas.length ? table(["Article", ">En stock", ">Acheté"], bas.map(s => h("tr", { class: "clic", onclick: () => { state.stock.q = s.a.nom; go("stock"); } },
+          bas.length ? table(["Article", ">En stock", ">Acheté"], bas.map(s => h("tr", { class: "clic", onclick: () => { state.stock.q = s.a.nom; state.stock.vue = "suivi"; go("stock"); } },
             h("td", null, s.a.nom), h("td", { class: "r " + (s.actuel < 0 ? "neg" : "bas") }, nb(s.actuel)), h("td", { class: "r" }, nb(s.achete)))))
             : h("p", { class: "muted", style: "margin:0" }, "Aucun article sous " + SEUIL_BAS * 100 + " % de la quantité achetée."))),
     ];
   }
 
+  // Trois lectures du stock : théorique (achats du siège − commandes des agences), réel (dernier comptage),
+  // suivi (dernier comptage + achats − commandes datés d'après ; théorique tant que l'article n'a jamais été compté).
+  const VUES_STOCK = [["theorique", "Inventaire théorique"], ["reel", "Inventaire réel"], ["suivi", "Inventaire suivi"]];
+  const qteVue = (s, vue) => vue === "theorique" ? s.theorique : vue === "reel" ? (s.inv ? s.inv.quantite : null) : s.actuel;
   function vStock() {
     const cats = [...new Set(db.articles.map(a => a.categorie))].sort();
-    const f = state.stock, q = slug(f.q);
-    const rows = C.stock.filter(s => (!f.cat || s.a.categorie === f.cat) && (!q || slug(s.a.nom).includes(q)));
-    const tot = rows.reduce((s, x) => s + x.valeur, 0);
-    const pos = C.stock.filter(x => x.actuel > 0);
-    const vente = pos.reduce((t, x) => t + x.actuel * (x.a.prixActuel || 0), 0), sansPrix = pos.filter(x => !x.a.prixActuel).length;
-    const alerte = C.stock.filter(x => x.actuel < 0 || (x.achete && x.actuel <= x.achete * SEUIL_BAS)).length;
+    const f = state.stock, vue = f.vue || "theorique";
+    const filtre = () => { const q = slug(f.q); return C.stock.filter(s => (!f.cat || s.a.categorie === f.cat) && (!q || slug(s.a.nom).includes(q))); };
+    const rows = filtre();
+    const val = s => Math.max(qteVue(s, vue) || 0, 0) * s.pmp;
+    const pos = C.stock.filter(x => (qteVue(x, vue) || 0) > 0);
+    const comptes = C.stock.filter(x => x.inv), ecarts = comptes.filter(x => x.ecart);
+    const dernier = comptes.reduce((d, x) => x.inv.date > d ? x.inv.date : d, "");
+    const alerte = C.stock.filter(x => { const v = qteVue(x, vue); return v != null && (v < 0 || (x.achete && v <= x.achete * SEUIL_BAS)); }).length;
+    const cartes = vue === "reel" ? [
+        stat(comptes.length + " / " + C.stock.length, "Articles déjà comptés"),
+        stat(nb(comptes.reduce((t, x) => t + x.inv.quantite, 0)), "Unités comptées lors des derniers comptages"),
+        stat(String(ecarts.length), "Comptages différents du stock théorique", ecarts.length ? "alerte" : "ok"),
+        stat(dernier ? dateFr(dernier) : "—", "Date du dernier comptage")]
+      : [stat(eur(C.stock.reduce((t, x) => t + val(x), 0)), (vue === "theorique" ? "Montant du stock théorique" : "Montant du stock suivi") + ", au prix d'achat du siège"),
+        stat(eur(pos.reduce((t, x) => t + qteVue(x, vue) * (x.a.prixActuel || 0), 0)), "Ce que vaudrait ce stock vendu aux agences, au prix de vente HT"),
+        stat(nb(pos.reduce((t, x) => t + qteVue(x, vue), 0)), "Unités en stock, sur " + pos.length + " articles"),
+        stat(String(alerte), "Articles épuisés, presque épuisés ou en négatif", alerte ? "alerte" : "ok")];
+    const aide = vue === "theorique" ? "Inventaire théorique = achats du siège − commandes des agences (hors commandes annulées), sans tenir compte des comptages."
+      : vue === "reel" ? "Inventaire réel = la quantité saisie lors du dernier comptage de chaque article. L'écart compare ce comptage au stock théorique à la même date. Utilisez « Compter » pour saisir ou mettre à jour un comptage."
+      : "Inventaire suivi = inventaire réel − commandes des agences passées après le comptage, + achats du siège reçus après le comptage. Tant qu'un article n'a jamais été compté, le suivi reprend le stock théorique.";
+    const csv = () => vue === "theorique" ? [["Article", "Catégorie", "Acheté par le siège", "Commandé par les agences", "Stock théorique", "PU achat moyen", "Valeur au prix d'achat"], ...rows.map(s => [s.a.nom, s.a.categorie, s.achete, s.vendu, s.theorique, r2(s.pmp), r2(val(s))])]
+      : vue === "reel" ? [["Article", "Catégorie", "Date du comptage", "Quantité comptée", "Stock théorique à cette date", "Écart", "Compté par"], ...rows.map(s => [s.a.nom, s.a.categorie, s.inv ? s.inv.date : "", s.inv ? s.inv.quantite : "", s.inv ? s.inv.quantite - s.ecart : "", s.inv ? s.ecart : "", s.inv ? s.inv.par || "" : ""])]
+      : [["Article", "Catégorie", "Dernier comptage", "Date du comptage", "Commandé depuis", "Acheté depuis", "Stock suivi", "PU achat moyen", "Valeur au prix d'achat"], ...rows.map(s => [s.a.nom, s.a.categorie, s.inv ? s.inv.quantite : "", s.inv ? s.inv.date : "", s.inv ? s.apresVente : "", s.inv ? s.apresAchat : "", s.actuel, r2(s.pmp), r2(val(s))])];
     return [
-      h("div", { class: "stats" }, stat(eur(C.stock.reduce((t, x) => t + x.valeur, 0)), "Montant du stock restant, au prix d'achat du siège"),
-        stat(eur(vente), "Ce que vaudrait ce stock vendu aux agences, au prix de vente HT" + (sansPrix ? " (" + sansPrix + " articles sans prix de vente comptés pour zéro)" : "")),
-        stat(nb(pos.reduce((t, x) => t + x.actuel, 0)), "Unités en stock, sur " + pos.length + " articles"),
-        stat(String(alerte), "Articles épuisés, presque épuisés ou en négatif", alerte ? "alerte" : "ok")),
+      h("div", { class: "tabs", role: "tablist", "aria-label": "Type d'inventaire" }, VUES_STOCK.map(([k, l]) => h("button", { role: "tab", "aria-selected": String(k === vue), onclick: () => { f.vue = k; render(); } }, l))),
+      h("div", { class: "stats" }, cartes),
       h("div", { class: "toolbar" },
-        h("input", { type: "search", placeholder: "Chercher un article…", value: f.q, "aria-label": "Chercher un article", oninput: e => { f.q = e.target.value; majTable(); } }),
+        h("input", { type: "search", placeholder: "Chercher un article…", value: f.q, "aria-label": "Chercher un article", oninput: e => { f.q = e.target.value; $("#t-stock").replaceChildren(tStock(filtre(), vue)); } }),
         h("select", { "aria-label": "Catégorie", onchange: e => { f.cat = e.target.value; render(); } }, h("option", { value: "" }, "Toutes les catégories"), cats.map(c => h("option", { selected: c === f.cat }, c))),
-        h("button", { class: "btn", onclick: () => exporterCsv("stock-john-taylor.csv", [["Article", "Catégorie", "Acheté par le siège", "Commandé par les agences", "Stock", "Dernier inventaire", "Date inventaire", "Écart", "PU achat moyen", "Valeur au prix d'achat", "Prix de vente HT", "Valeur au prix de vente"],
-          ...rows.map(s => [s.a.nom, s.a.categorie, s.achete, s.vendu, s.actuel, s.inv ? s.inv.quantite : "", s.inv ? s.inv.date : "", s.ecart ?? "", r2(s.pmp), r2(s.valeur), s.a.prixActuel || "", r2(Math.max(s.actuel, 0) * (s.a.prixActuel || 0))])]) }, "Exporter")),
-      h("div", { id: "t-stock" }, tStock(rows, tot)),
-      h("p", { class: "muted", style: "margin:0;font-size:13px" }, "Cliquez un article pour voir ses commandes. Stock = achats du siège − commandes des agences. Après un inventaire, le stock repart de la quantité comptée, plus les achats et moins les commandes datés d'après. La valeur utilise le prix d'achat moyen payé par le siège."),
+        h("button", { class: "btn", onclick: () => exporterCsv("inventaire-" + vue + "-john-taylor.csv", csv()) }, "Exporter")),
+      h("div", { id: "t-stock", class: "compact" }, tStock(rows, vue)),
+      h("p", { class: "muted", style: "margin:0;font-size:13px" }, aide + " Cliquez un article pour voir ses achats et ses commandes."),
     ];
-    function majTable() { const q2 = slug(f.q); const r = C.stock.filter(s => (!f.cat || s.a.categorie === f.cat) && (!q2 || slug(s.a.nom).includes(q2))); $("#t-stock").replaceChildren(tStock(r, r.reduce((s, x) => s + x.valeur, 0))); }
   }
-  function tStock(rows, tot) {
-    return table(["Article", ">Acheté", ">Commandé", "", ">En stock", ">Inventaire", ">Valeur", ""], rows.map(s => {
-      const pct = s.achete ? Math.max(0, Math.min(100, s.actuel / s.achete * 100)) : 0;
-      return h("tr", { class: "clic", title: "Voir les commandes de cet article", onclick: () => pProduit(s) }, h("td", null, h("div", { class: "art" }, vignette(s.a, 36), h("div", null, s.a.nom, h("span", { class: "sub" }, s.a.categorie + (s.a.surNouveauSite ? "" : " · absent du nouveau site"))))),
-        h("td", { class: "r" }, nb(s.achete)), h("td", { class: "r" }, nb(s.vendu)),
+  function tStock(rows, vue) {
+    const nom = s => h("td", null, h("div", { class: "art" }, vignette(s.a, 36), h("div", null, s.a.nom, h("span", { class: "sub" }, s.a.categorie + (s.a.surNouveauSite ? "" : " · absent du nouveau site")))));
+    const tr = (s, ...c) => h("tr", { class: "clic", title: "Voir les achats et les commandes de cet article", onclick: () => pProduit(s) }, nom(s), ...c);
+    const qte = (s, v) => h("td", { class: "r " + (v < 0 ? "neg" : s.achete && v <= s.achete * SEUIL_BAS ? "bas" : "") }, h("b", null, nb(v)));
+    const compter = s => h("td", { class: "r" }, h("button", { class: "btn small", onclick: e => { e.stopPropagation(); pInventaire(s); } }, "Compter"));
+    const tiret = () => h("span", { class: "muted" }, "—");
+    const val = (s, v) => Math.max(v || 0, 0) * s.pmp, tot = v => eur(rows.reduce((t, s) => t + val(s, v(s)), 0));
+    if (vue === "theorique") return table(["Article", ">Acheté par\nle siège", ">Commandé par\nles agences", "", ">Stock\nthéorique", ">Valeur"], rows.map(s => {
+      const pct = s.achete ? Math.max(0, Math.min(100, s.theorique / s.achete * 100)) : 0;
+      return tr(s, h("td", { class: "r" }, nb(s.achete)), h("td", { class: "r" }, nb(s.vendu)),
         h("td", null, h("div", { class: "barre", title: Math.round(pct) + " % restant" }, h("i", { style: "width:" + pct + "%" + (pct <= SEUIL_BAS * 100 ? ";background:var(--magenta)" : "") }))),
-        h("td", { class: "r " + (s.actuel < 0 ? "neg" : s.achete && s.actuel <= s.achete * SEUIL_BAS ? "bas" : "") }, nb(s.actuel)),
-        h("td", { class: "r" }, s.inv ? [nb(s.inv.quantite), h("span", { class: "sub" }, dateFr(s.inv.date) + (s.ecart ? " · écart " + (s.ecart > 0 ? "+" : "") + nb(s.ecart) : ""))] : h("span", { class: "muted" }, "—")),
-        h("td", { class: "r" }, eur(s.valeur)),
-        h("td", { class: "r" }, h("button", { class: "btn small", onclick: e => { e.stopPropagation(); pInventaire(s); } }, "Compter")));
-    }), h("tr", null, h("td", { colSpan: 6 }, rows.length + " articles"), h("td", { class: "r" }, eur(tot)), h("td")));
+        qte(s, s.theorique), h("td", { class: "r" }, eur(val(s, s.theorique))));
+    }), h("tr", null, h("td", { colSpan: 5 }, rows.length + " articles"), h("td", { class: "r" }, tot(s => s.theorique))));
+    if (vue === "reel") return table(["Article", "Date du\ncomptage", ">Quantité\ncomptée", ">Théorique à\ncette date", ">Écart", "Compté par", ""], rows.map(s => s.inv
+      ? tr(s, h("td", { style: "white-space:nowrap" }, dateFr(s.inv.date)), h("td", { class: "r" }, h("b", null, nb(s.inv.quantite))), h("td", { class: "r" }, nb(s.inv.quantite - s.ecart)),
+          h("td", { class: "r " + (s.ecart < 0 ? "neg" : "") }, s.ecart ? (s.ecart > 0 ? "+" : "") + nb(s.ecart) : "0"), h("td", { class: "muted" }, s.inv.par || ""), compter(s))
+      : tr(s, h("td", { class: "muted", colSpan: 5 }, "Jamais compté"), compter(s))),
+      h("tr", null, h("td", { colSpan: 7 }, rows.filter(s => s.inv).length + " articles comptés sur " + rows.length)));
+    return table(["Article", ">Dernier\ncomptage", ">Commandé\ndepuis", ">Acheté\ndepuis", ">Stock\nsuivi", ">Valeur", ""], rows.map(s => tr(s,
+      h("td", { class: "r" }, s.inv ? [nb(s.inv.quantite), h("span", { class: "sub" }, dateFr(s.inv.date))] : h("span", { class: "sub" }, "Jamais compté, stock théorique")),
+      h("td", { class: "r" }, s.inv ? (s.apresVente ? "− " + nb(s.apresVente) : "0") : tiret()), h("td", { class: "r" }, s.inv ? (s.apresAchat ? "+ " + nb(s.apresAchat) : "0") : tiret()),
+      qte(s, s.actuel), h("td", { class: "r" }, eur(val(s, s.actuel))), compter(s))),
+      h("tr", null, h("td", { colSpan: 5 }, rows.length + " articles"), h("td", { class: "r" }, tot(s => s.actuel)), h("td")));
   }
   function pProduit(s) {
     const a = s.a, lignes = [];
@@ -795,7 +824,7 @@ body.verrou .wrap { display: none; }
   function vControles() {
     if (!C.controles.length) return [h("div", { class: "empty" }, h("strong", null, "Tout est en ordre"), "Aucune commande non facturée, aucun stock négatif, aucune rétrocession en retard.")];
     const par = new Map(); for (const c of C.controles) { const g = par.get(c.type) || []; g.push(c); par.set(c.type, g); }
-    const ouvrir = c => () => { if (c.cible.cmd) pCommande(db.commandes.find(x => x.id === c.cible.cmd)); else if (c.cible.stock) { state.stock.q = C.art.get(c.cible.stock).nom; state.stock.cat = ""; go("stock"); } else if (c.cible.retro) { state.retroTri = c.cible.retro; go("retro"); } };
+    const ouvrir = c => () => { if (c.cible.cmd) pCommande(db.commandes.find(x => x.id === c.cible.cmd)); else if (c.cible.stock) { state.stock.q = C.art.get(c.cible.stock).nom; state.stock.cat = ""; state.stock.vue = "suivi"; go("stock"); } else if (c.cible.retro) { state.retroTri = c.cible.retro; go("retro"); } };
     return [h("p", { class: "muted", style: "margin:0" }, C.controles.length + " points à vérifier. Cette liste se vide au fur et à mesure des corrections ; cliquez une ligne pour l'ouvrir."),
       ...[...par.entries()].map(([type, lst]) => h("section", { class: "bloc" }, h("div", { class: "top" }, h("h3", null, type), h("span", { class: "pill" + (lst[0].grave ? "" : " zero") }, lst.length)),
         table(["À vérifier"], lst.map(c => h("tr", { class: "clic", onclick: ouvrir(c) }, h("td", null, c.texte))))))];
