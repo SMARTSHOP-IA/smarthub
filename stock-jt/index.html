@@ -107,6 +107,8 @@ td .sub { color: var(--muted); font-size: 12.5px; display: block; }
 .vig img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #fff; }
 .art { display: flex; gap: 10px; align-items: center; min-width: 0; }
 /* Tableau resserré : titres sur deux lignes, pour tenir dans la largeur sans défilement. */
+a.sellsy { color: inherit; text-decoration: underline; text-decoration-color: var(--magenta); text-underline-offset: 3px; }
+a.sellsy:hover { color: var(--magenta); }
 .compact th { white-space: pre-line; line-height: 1.25; vertical-align: bottom; padding: 8px; letter-spacing: .04em; }
 .compact td { padding: 8px; }
 .compact td.r { white-space: normal; }
@@ -580,7 +582,7 @@ body.verrou .wrap { display: none; }
         s.inv ? h("span", { class: "muted" }, "Dernier comptage : " + nb(s.inv.quantite) + " le " + dateFr(s.inv.date)) : null)),
       h("div", { class: "stats", style: "grid-template-columns:repeat(4,minmax(0,1fr));gap:8px" }, mini(nb(s.achete), "Acheté par le siège"), mini(nb(s.vendu), "Commandé par les agences"), mini(nb(s.actuel), "En stock"), mini(eur(s.valeur), "Montant restant")),
       h("div", null, h("h2", { style: "margin-bottom:8px" }, "Achats du siège (" + achats.length + ")"),
-        achats.length ? table(["Date", "Devis", ">Qté", ">PU HT", ">Total HT"], achats.map(x => h("tr", null, h("td", { style: "white-space:nowrap" }, dateFr(x.date)), h("td", null, x.devis || "—"), h("td", { class: "r" }, nb(x.quantite)), h("td", { class: "r" }, eur(x.puht)), h("td", { class: "r" }, eur(x.totalHT)))),
+        achats.length ? table(["Date", "Devis", ">Qté", ">PU HT", ">Total HT"], achats.map(x => h("tr", null, h("td", { style: "white-space:nowrap" }, dateFr(x.date)), h("td", null, lienSellsy("devis", x.sellsyDevisId, x.devis)), h("td", { class: "r" }, nb(x.quantite)), h("td", { class: "r" }, eur(x.puht)), h("td", { class: "r" }, eur(x.totalHT)))),
           h("tr", null, h("td", { colSpan: 2 }, "Total"), h("td", { class: "r" }, nb(s.achete)), h("td"), h("td", { class: "r" }, eur(s.valAchat))))
           : h("p", { class: "muted", style: "margin:0" }, "Aucun achat du siège enregistré : le stock de cet article part de zéro.")),
       h("div", null, h("h2", { style: "margin-bottom:8px" }, "Commandes des agences (" + comptees.length + ")"),
@@ -612,17 +614,17 @@ body.verrou .wrap { display: none; }
     const sel = (lbl, key, opts) => h("select", { "aria-label": lbl, onchange: e => { f[key] = e.target.value; render(); } }, h("option", { value: "" }, lbl), opts.map(o => Array.isArray(o) ? o : [o, o]).map(([v, t]) => h("option", { value: v, selected: v === f[key] }, t)));
     return [
       h("div", { class: "toolbar" },
-        h("input", { type: "search", placeholder: "N° de commande, agence, facture, produit…", value: f.q, "aria-label": "Chercher une commande", onchange: e => { f.q = e.target.value; render(); } }),
+        h("input", { type: "search", placeholder: "N° de commande, agence, facture, produit…", value: f.q, "aria-label": "Chercher une commande", oninput: e => { f.q = e.target.value; clearTimeout(vCommandes.t); vCommandes.t = setTimeout(() => { render(); const z = $('input[aria-label="Chercher une commande"]'); if (z) { z.focus(); z.setSelectionRange(z.value.length, z.value.length); } }, 250); } }),
         sel("Tous les trimestres", "tri", tris.map(t => [t || "aucun", triFr(t)])), sel("Tous les états", "etat", ETATS), sel("Toutes les origines", "source", SOURCES),
         h("button", { class: "btn", onclick: () => exporterCsv("commandes-john-taylor.csv", [["N°", "Date", "Trimestre", "Origine", "Agence", "Facturé à", "Facture", "État", "Total produits HT", "À rétrocéder", "Détail"],
           ...rows.map(c => [c.numero, c.date || "", c._tri, c.source, c.agence || "", c.factureA || "", c.facture || c.factureNum || "", c.etat, r2(c._total), r2(c._retro), (c.lignes || []).map(l => l.quantite + " × " + l.libelle).join(" | ")])]) }, "Exporter"),
         h("button", { class: "btn primary", onclick: () => pCommande(null) }, "+ Commande manuelle")),
       rows.length ? table(["N°", "Date", "Agence", "Produits", "Facture", "État", ">Produits HT", ">À rétrocéder"], rows.slice(0, 400).map(c =>
         h("tr", { class: "clic", onclick: () => pCommande(c) },
-          h("td", null, c.numero, h("span", { class: "sub" }, c.source)), h("td", null, dateFr(c.date), h("span", { class: "sub" }, triFr(c._tri))),
+          h("td", null, lienSellsy("devis", c.sellsyDevisId, c.numero), h("span", { class: "sub" }, c.source)), h("td", null, dateFr(c.date), h("span", { class: "sub" }, triFr(c._tri))),
           h("td", null, c.agence || c.ville || "—", h("span", { class: "sub" }, c.factureA || "")),
           h("td", null, (c.lignes || []).length + " ligne" + ((c.lignes || []).length > 1 ? "s" : ""), c._sansArticle ? h("span", { class: "sub neg" }, c._sansArticle + " à identifier") : null),
-          h("td", null, c.facture || c.factureNum || h("span", { class: "muted" }, "—")), h("td", null, etatEl(c.etat)),
+          h("td", null, lienFacture(c)), h("td", null, etatEl(c.etat)),
           h("td", { class: "r" }, eur(c._total)), h("td", { class: "r" }, c.retroExclue ? h("span", { class: "tag" }, "exclue") : eur(c._retro)))),
         h("tr", null, h("td", { colSpan: 6 }, rows.length + " commandes" + (rows.length > 400 ? " (400 affichées, affinez le filtre)" : "")), h("td", { class: "r" }, eur(tot)), h("td", { class: "r" }, eur(totR))))
         : h("div", { class: "empty" }, h("strong", null, "Aucune commande ne correspond"), "Modifiez la recherche ou les filtres."),
@@ -634,8 +636,19 @@ body.verrou .wrap { display: none; }
     const arts = [...db.articles].sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
     const i = (k, props) => h("input", { value: d[k] ?? "", oninput: e => d[k] = e.target.value, ...props });
     const s = (k, opts) => h("select", { onchange: e => d[k] = e.target.value }, opts.map(o => h("option", { value: o, selected: o === d[k] }, o)));
-    const factureA = i("factureA", { placeholder: "Entité facturée" });
+    // « Facturé à » : liste des entités de l'onglet Agences, puis le même choix présenté par agence.
+    const ents = [...new Set(db.entites.map(e => e.entite).filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr"));
+    const parAgence = [...db.entites].sort((a, b) => a.agence.localeCompare(b.agence, "fr"));
+    const factureA = h("select", { "aria-label": "Facturé à", onchange: e => d.factureA = e.target.value },
+      h("option", { value: "" }, "Choisir…"),
+      d.factureA && !ents.includes(d.factureA) ? h("optgroup", { label: "Valeur actuelle" }, h("option", { value: d.factureA }, d.factureA)) : null,
+      h("optgroup", { label: "Entités facturées" }, ents.map(e => h("option", { value: e }, e))),
+      h("optgroup", { label: "Choisir par agence" }, parAgence.map(e => h("option", { value: e.entite || e.agence }, e.agence + (e.entite ? " : " + e.entite : "")))));
+    factureA.value = d.factureA || "";
     const agence = i("agence", { list: "dl-agences", placeholder: "Agence", onchange: e => { const en = db.entites.find(x => x.agence === e.target.value); if (en && en.entite && !d.factureA) { d.factureA = en.entite; factureA.value = en.entite; } } });
+    const liens = c && (c.sellsyFactureId || c.sellsyDevisId) ? h("div", { class: "field full", style: "display:flex;gap:18px;flex-wrap:wrap" },
+      c.sellsyFactureId ? lienSellsy("facture", c.sellsyFactureId, "Ouvrir la facture " + (c.facture || c.factureNum || "") + " dans Sellsy") : null,
+      c.sellsyDevisId ? lienSellsy("devis", c.sellsyDevisId, "Ouvrir le devis dans Sellsy") : null) : null;
     const totalEl = h("b", { class: "num" }, "");
     const tbody = h("tbody");
     const maj = () => totalEl.textContent = eur(d.lignes.reduce((t, l) => t + (l.totalHT || 0), 0));
@@ -661,7 +674,7 @@ body.verrou .wrap { display: none; }
         champ("Origine", s("source", SOURCES)),
         champ("Date", i("date", { type: "date" })), champ("Trimestre (si pas de date)", i("trimestre", { placeholder: "ex. 2026-T4" })),
         champ("Agence", agence), champ("Facturé à", factureA),
-        champ("N° de facture Sellsy", i("facture", { placeholder: "ex. F-20261124-27026" })), champ("État de la facture", s("etat", ETATS)),
+        champ("N° de facture Sellsy", i("facture", { placeholder: "ex. F-20261124-27026" })), champ("État de la facture", s("etat", ETATS)), liens,
         h("label", { class: "check field full" }, excl, "Ne pas compter dans la rétrocession (ex. convention offerte par le siège)"),
         h("div", { class: "field full" }, h("label", null, "Note"), h("textarea", { value: d.note || "", oninput: e => d.note = e.target.value }))),
       h("div", null, h("h2", { style: "margin-bottom:8px" }, "Produits (hors frais de port)"),
@@ -677,6 +690,7 @@ body.verrou .wrap { display: none; }
         if (!d.lignes.length) return toast("Ajoutez au moins un produit.");
         if (neuf) { d.id = slug(d.numero) || uid("cmd"); if (db.commandes.some(x => x.id === d.id)) return toast("Une commande porte déjà ce numéro."); d.saisiePar = state.me.email; }
         for (const k of Object.keys(d)) if (k.startsWith("_")) delete d[k];
+        if (c && (d.facture || "") !== (c.facture || "")) { delete d.sellsyFactureId; }
         d.totalHT = r2(d.lignes.reduce((t, l) => t + (l.totalHT || 0), 0)); delete d.aCompleter; if (!neuf) delete d.montantsEstimes;
         if (await sauver("commandes", d, neuf ? "Commande ajoutée." : "Commande enregistrée.")) { fermer(); render(); }
       }, "primary"]]);
@@ -691,7 +705,7 @@ body.verrou .wrap { display: none; }
       return h("tr", { id: "detailTri" }, h("td", { colSpan: 9, style: "padding:14px;background:var(--bg)" }, h("section", { class: "bloc" },
         h("div", { class: "top" }, h("h3", null, "Factures de " + triFr(t.tri) + " (" + cmds.length + " commandes)"), h("button", { class: "btn small", onclick: () => { state.retroTri = null; render(); } }, "Fermer")),
         cmds.length ? table(["N°", "Date", "Agence", "Facturé à", "Facture", "État", ">À rétrocéder"], cmds.map(c => h("tr", { class: "clic", onclick: () => pCommande(c) },
-          h("td", null, c.numero), h("td", null, dateFr(c.date)), h("td", null, c.agence || "—"), h("td", null, c.factureA || "—"), h("td", null, c.facture || c.factureNum || "—"), h("td", null, etatEl(c.etat)),
+          h("td", null, c.numero), h("td", null, dateFr(c.date)), h("td", null, c.agence || "—"), h("td", null, c.factureA || "—"), h("td", null, lienFacture(c)), h("td", null, etatEl(c.etat)),
           h("td", { class: "r" }, c.retroExclue ? h("span", { class: "tag" }, "exclue") : eur(c._retro)))))
           : h("p", { class: "muted", style: "margin:0" }, "Aucune commande sur ce trimestre."))));
     };
@@ -727,16 +741,24 @@ body.verrou .wrap { display: none; }
       if (await sauver("versements", { id: uid("ver"), trimestre: t.tri, date: d.value || auj(), montant: num(m.value), reference: ref.value.trim(), par: state.me.email }, "Versement enregistré.")) { fermer(); render(); } }, "primary"]]);
   }
 
+  // Liens vers Sellsy : l'identifiant interne du document (sellsyFactureId, sellsyDevisId) vient du fichier « liens Sellsy » importé en fusion.
+  function lienSellsy(type, id, texte) {
+    if (!texte) return h("span", { class: "muted" }, "—");
+    if (!id) return texte;
+    return h("a", { class: "sellsy", href: "https://www.sellsy.com/?_f=" + (type === "devis" ? "estimateOverview" : "invoiceOverview") + "&id=" + encodeURIComponent(id), target: "_blank", rel: "noopener",
+      title: "Ouvrir " + (type === "devis" ? "le devis" : "la facture") + " dans Sellsy", onclick: e => e.stopPropagation() }, texte, " ↗");
+  }
+  const lienFacture = c => lienSellsy("facture", c.sellsyFactureId, c.facture || c.factureNum);
   function vAchats() {
     const par = new Map();
-    for (const a of db.achats) { const g = par.get(a.devis) || { devis: a.devis, lib: a.libelleDevis || a.devis, lignes: [], total: 0 }; g.lignes.push(a); g.total += a.totalHT; par.set(a.devis, g); }
+    for (const a of db.achats) { const g = par.get(a.devis) || { devis: a.devis, lib: a.libelleDevis || a.devis, lignes: [], total: 0 }; g.lignes.push(a); g.sellsy = g.sellsy || a.sellsyDevisId; g.total += a.totalHT; par.set(a.devis, g); }
     const groupes = [...par.values()];
     return [
       h("div", { class: "toolbar" }, h("span", { class: "muted", style: "font-size:13px" }, "Ce que le siège a commandé et payé : c'est ce qui crée le stock."), h("span", { class: "spacer" }),
         h("button", { class: "btn primary", onclick: () => pAchat(null) }, "+ Achat du siège")),
       h("div", { class: "stats" }, stat(eur(db.achats.reduce((s, a) => s + a.totalHT, 0)), "Total acheté par le siège (HT)"), stat(String(groupes.length), "Devis ou avenants"), stat(nb(db.achats.reduce((s, a) => s + a.quantite, 0)), "Unités entrées en stock"),
         stat(eur(C.stock.reduce((s, x) => s + x.valeur, 0)), "Valeur du stock restant")),
-      ...groupes.map(g => h("section", { class: "bloc" }, h("div", { class: "top" }, h("h3", null, g.lib), h("b", { class: "num" }, eur(g.total))),
+      ...groupes.map(g => h("section", { class: "bloc" }, h("div", { class: "top" }, h("h3", null, lienSellsy("devis", g.sellsy, g.lib)), h("b", { class: "num" }, eur(g.total))),
         table(["Article", "Date", ">Quantité", ">PU HT", ">Total HT"], g.lignes.map(a => h("tr", { class: "clic", onclick: () => pAchat(a) }, h("td", null, C.art.get(a.articleId)?.nom || h("span", { class: "neg" }, "Article inconnu")),
           h("td", null, dateFr(a.date)), h("td", { class: "r" }, nb(a.quantite)), h("td", { class: "r" }, eur(a.puht)), h("td", { class: "r" }, eur(a.totalHT))))))),
     ];
