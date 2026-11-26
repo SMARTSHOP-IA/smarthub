@@ -125,3 +125,8 @@ a été acheté à un autre prix, différent du prix de vente actuel, l'onglet C
 vente vérifié » de la fiche produit soit utilisé (champ `prixRevuAchat` de l'article). L'onglet Achats du siège
 propose une vue « Par produit ».
 L'alerte de changement de prix s'ouvre aussi en pop-up à l'arrivée sur l'outil et dès qu'un nouveau produit est concerné.
+
+Factures d'une seule commande : la tâche horaire lit aussi leurs lignes de produits (quantité en unités, prix unitaire
+net de remise) et les reporte dans `sellsyDetail.lignes` avec `remise: true` si la facture applique une remise. Une
+commande saisie sans détail reprend alors ses lignes de la facture. Le contrôle « Prix remisé à confirmer » reste
+affiché tant que la case « Remise Smartform » (`remiseSmartform`) de la commande n'est pas cochée.
