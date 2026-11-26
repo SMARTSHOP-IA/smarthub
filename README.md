@@ -130,3 +130,5 @@ Factures d'une seule commande : la tâche horaire lit aussi leurs lignes de prod
 net de remise) et les reporte dans `sellsyDetail.lignes` avec `remise: true` si la facture applique une remise. Une
 commande saisie sans détail reprend alors ses lignes de la facture. Le contrôle « Prix remisé à confirmer » reste
 affiché tant que la case « Remise Smartform » (`remiseSmartform`) de la commande n'est pas cochée.
+
+Catalogue : la case « En ligne » (`enLigne` sur l'article) indique si le produit est encore proposé sur le site ; sans valeur, c'est la présence relevée sur le nouveau site (`surNouveauSite`) qui s'affiche.
