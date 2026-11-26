@@ -116,3 +116,11 @@ hors port) et `sellsyDetail` (`agence` du titre de section, `lignes` produits et
 Contrôles compare alors le montant, les quantités et l'agence ; les lignes de la commande ne sont jamais modifiées.
 Les quantités de l'outil sont toujours en unités de produit, alors qu'une facture peut compter en lots : l'écart de
 quantités n'est signalé que si le montant diffère aussi.
+
+### Historique des prix d'achat
+
+Les achats du siège d'un article forment des lots, pris dans l'ordre d'arrivée (stock apporté, date, numéro de devis)
+et consommés du plus ancien au plus récent par les commandes des agences. Quand un lot est terminé et que le suivant
+a été acheté à un autre prix, différent du prix de vente actuel, l'onglet Contrôles affiche « Prix d'achat changé » jusqu'à ce que le bouton « Prix de
+vente vérifié » de la fiche produit soit utilisé (champ `prixRevuAchat` de l'article). L'onglet Achats du siège
+propose une vue « Par produit ».
