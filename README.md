@@ -84,3 +84,9 @@ match /stock_jt_acces/{email} {
 ```
 
 Sans ces règles, la page affiche « Accès Firebase à ouvrir ».
+
+### Liens vers Sellsy
+
+Les numéros de facture et de devis s'ouvrent dans Sellsy quand la fiche porte l'identifiant interne du document
+(`sellsyFactureId`, `sellsyDevisId`). Ces identifiants viennent d'un fichier « liens Sellsy » produit à partir de
+l'API Sellsy et importé en mode « fusion » dans Réglages. Sans identifiant, le numéro reste un simple texte.
