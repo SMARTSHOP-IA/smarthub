@@ -103,6 +103,9 @@ tbody tr.clic { cursor: pointer; }
 tbody tr.clic:hover { background: var(--hover); }
 tfoot td { font-weight: 600; border-top: 2px solid var(--line); border-bottom: 0; }
 td .sub { color: var(--muted); font-size: 12.5px; display: block; }
+.vig { display: inline-grid; place-items: center; position: relative; flex: none; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); color: var(--muted); font: 600 14px var(--display); overflow: hidden; vertical-align: middle; }
+.vig img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #fff; }
+.art { display: flex; gap: 10px; align-items: center; min-width: 0; }
 .neg { color: var(--magenta); font-weight: 600; }
 .bas { color: var(--warn); font-weight: 600; }
 .etat { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; white-space: nowrap; }
@@ -451,6 +454,14 @@ body.verrou .wrap { display: none; }
     h("thead", null, h("tr", null, tetes.map(t => h("th", { class: t.startsWith(">") ? "r" : "" }, t.replace(/^>/, ""))))),
     h("tbody", null, lignes), pied ? h("tfoot", null, pied) : null));
   const etatEl = e => h("span", { class: "etat", style: "--c:" + (ETAT_C[e] || "var(--muted)") }, e || "Inconnu");
+  const vignette = (a, t) => { const b = h("span", { class: "vig", style: "width:" + t + "px;height:" + t + "px;font-size:" + Math.max(12, Math.round(t / 3)) + "px" }, ((a.nom || "").trim()[0] || "?").toUpperCase());
+    if (a.image) { const i = h("img", { src: a.image, alt: "", loading: "lazy", referrerPolicy: "no-referrer" }); i.onerror = () => i.remove(); b.append(i); }
+    return b; };
+  // Réduit une photo choisie sur l'ordinateur (480 px au plus, JPEG) pour qu'elle tienne dans la fiche de l'article.
+  const reduire = f => new Promise((ok, ko) => { const img = new Image(), url = URL.createObjectURL(f);
+    img.onload = () => { const k = Math.min(1, 480 / Math.max(img.width, img.height)), c = h("canvas", { width: Math.round(img.width * k), height: Math.round(img.height * k) }), x = c.getContext("2d");
+      x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); ok(c.toDataURL("image/jpeg", 0.82)); };
+    img.onerror = () => { URL.revokeObjectURL(url); ko(new Error("image illisible")); }; img.src = url; });
   const stat = (v, l, cls, onclick) => h(onclick ? "button" : "div", { class: "stat " + (cls || ""), onclick }, h("span", { class: "v" }, v), h("span", { class: "l" }, l));
 
   function vSynthese() {
@@ -482,28 +493,61 @@ body.verrou .wrap { display: none; }
     const f = state.stock, q = slug(f.q);
     const rows = C.stock.filter(s => (!f.cat || s.a.categorie === f.cat) && (!q || slug(s.a.nom).includes(q)));
     const tot = rows.reduce((s, x) => s + x.valeur, 0);
+    const pos = C.stock.filter(x => x.actuel > 0);
+    const vente = pos.reduce((t, x) => t + x.actuel * (x.a.prixActuel || 0), 0), sansPrix = pos.filter(x => !x.a.prixActuel).length;
+    const alerte = C.stock.filter(x => x.actuel < 0 || (x.achete && x.actuel <= x.achete * SEUIL_BAS)).length;
     return [
+      h("div", { class: "stats" }, stat(eur(C.stock.reduce((t, x) => t + x.valeur, 0)), "Montant du stock restant, au prix d'achat du siège"),
+        stat(eur(vente), "Montant du stock restant, au prix de vente HT" + (sansPrix ? " (" + sansPrix + " article(s) sans prix de vente)" : "")),
+        stat(nb(pos.reduce((t, x) => t + x.actuel, 0)), "Unités en stock, sur " + pos.length + " articles"),
+        stat(String(alerte), "Articles épuisés, presque épuisés ou en négatif", alerte ? "alerte" : "ok")),
       h("div", { class: "toolbar" },
         h("input", { type: "search", placeholder: "Chercher un article…", value: f.q, "aria-label": "Chercher un article", oninput: e => { f.q = e.target.value; majTable(); } }),
         h("select", { "aria-label": "Catégorie", onchange: e => { f.cat = e.target.value; render(); } }, h("option", { value: "" }, "Toutes les catégories"), cats.map(c => h("option", { selected: c === f.cat }, c))),
-        h("button", { class: "btn", onclick: () => exporterCsv("stock-john-taylor.csv", [["Article", "Catégorie", "Acheté par le siège", "Commandé par les agences", "Stock", "Dernier inventaire", "Date inventaire", "Écart", "PU achat moyen", "Valeur"],
-          ...rows.map(s => [s.a.nom, s.a.categorie, s.achete, s.vendu, s.actuel, s.inv ? s.inv.quantite : "", s.inv ? s.inv.date : "", s.ecart ?? "", r2(s.pmp), r2(s.valeur)])]) }, "Exporter")),
+        h("button", { class: "btn", onclick: () => exporterCsv("stock-john-taylor.csv", [["Article", "Catégorie", "Acheté par le siège", "Commandé par les agences", "Stock", "Dernier inventaire", "Date inventaire", "Écart", "PU achat moyen", "Valeur au prix d'achat", "Prix de vente HT", "Valeur au prix de vente"],
+          ...rows.map(s => [s.a.nom, s.a.categorie, s.achete, s.vendu, s.actuel, s.inv ? s.inv.quantite : "", s.inv ? s.inv.date : "", s.ecart ?? "", r2(s.pmp), r2(s.valeur), s.a.prixActuel || "", r2(Math.max(s.actuel, 0) * (s.a.prixActuel || 0))])]) }, "Exporter")),
       h("div", { id: "t-stock" }, tStock(rows, tot)),
-      h("p", { class: "muted", style: "margin:0;font-size:13px" }, "Stock = achats du siège − commandes des agences. Après un inventaire, le stock repart de la quantité comptée, plus les achats et moins les commandes datés d'après. La valeur utilise le prix d'achat moyen payé par le siège."),
+      h("p", { class: "muted", style: "margin:0;font-size:13px" }, "Cliquez un article pour voir ses commandes. Stock = achats du siège − commandes des agences. Après un inventaire, le stock repart de la quantité comptée, plus les achats et moins les commandes datés d'après. La valeur utilise le prix d'achat moyen payé par le siège."),
     ];
     function majTable() { const q2 = slug(f.q); const r = C.stock.filter(s => (!f.cat || s.a.categorie === f.cat) && (!q2 || slug(s.a.nom).includes(q2))); $("#t-stock").replaceChildren(tStock(r, r.reduce((s, x) => s + x.valeur, 0))); }
   }
   function tStock(rows, tot) {
     return table(["Article", ">Acheté", ">Commandé", "", ">En stock", ">Inventaire", ">Valeur", ""], rows.map(s => {
       const pct = s.achete ? Math.max(0, Math.min(100, s.actuel / s.achete * 100)) : 0;
-      return h("tr", null, h("td", null, s.a.nom, h("span", { class: "sub" }, s.a.categorie + (s.a.surNouveauSite ? "" : " · absent du nouveau site"))),
+      return h("tr", { class: "clic", title: "Voir les commandes de cet article", onclick: () => pProduit(s) }, h("td", null, h("div", { class: "art" }, vignette(s.a, 36), h("div", null, s.a.nom, h("span", { class: "sub" }, s.a.categorie + (s.a.surNouveauSite ? "" : " · absent du nouveau site"))))),
         h("td", { class: "r" }, nb(s.achete)), h("td", { class: "r" }, nb(s.vendu)),
         h("td", null, h("div", { class: "barre", title: Math.round(pct) + " % restant" }, h("i", { style: "width:" + pct + "%" + (pct <= SEUIL_BAS * 100 ? ";background:var(--magenta)" : "") }))),
         h("td", { class: "r " + (s.actuel < 0 ? "neg" : s.achete && s.actuel <= s.achete * SEUIL_BAS ? "bas" : "") }, nb(s.actuel)),
         h("td", { class: "r" }, s.inv ? [nb(s.inv.quantite), h("span", { class: "sub" }, dateFr(s.inv.date) + (s.ecart ? " · écart " + (s.ecart > 0 ? "+" : "") + nb(s.ecart) : ""))] : h("span", { class: "muted" }, "—")),
         h("td", { class: "r" }, eur(s.valeur)),
-        h("td", { class: "r" }, h("button", { class: "btn small", onclick: () => pInventaire(s) }, "Compter")));
+        h("td", { class: "r" }, h("button", { class: "btn small", onclick: e => { e.stopPropagation(); pInventaire(s); } }, "Compter")));
     }), h("tr", null, h("td", { colSpan: 6 }, rows.length + " articles"), h("td", { class: "r" }, eur(tot)), h("td")));
+  }
+  function pProduit(s) {
+    const a = s.a, lignes = [];
+    for (const c of db.commandes) for (const l of c.lignes || []) if (l.articleId === a.id) lignes.push({ c, l });
+    lignes.sort((x, y) => (y.c.date || y.c._tri || "").localeCompare(x.c.date || x.c._tri || ""));
+    const comptees = lignes.filter(x => x.c.etat !== "Annulée");
+    const achats = db.achats.filter(x => x.articleId === a.id).sort((x, y) => (y.date || "").localeCompare(x.date || ""));
+    const mini = (v, l) => h("div", { class: "stat", style: "padding:10px 12px" }, h("span", { class: "v", style: "font-size:19px" }, v), h("span", { class: "l" }, l));
+    panneau(a.nom, [
+      h("div", { class: "art", style: "gap:16px;align-items:flex-start" }, vignette(a, 110), h("div", { style: "display:grid;gap:4px" },
+        h("span", { class: "muted" }, a.categorie + (a.surNouveauSite ? "" : " · absent du nouveau site")),
+        h("span", null, "Prix de vente HT : ", h("b", null, a.prixActuel ? eur(a.prixActuel) : "non renseigné")),
+        h("span", null, "Prix d'achat moyen du siège : ", h("b", null, s.pmp ? eur(s.pmp) : "aucun achat enregistré")),
+        s.inv ? h("span", { class: "muted" }, "Dernier comptage : " + nb(s.inv.quantite) + " le " + dateFr(s.inv.date)) : null)),
+      h("div", { class: "stats", style: "grid-template-columns:repeat(4,minmax(0,1fr));gap:8px" }, mini(nb(s.achete), "Acheté par le siège"), mini(nb(s.vendu), "Commandé par les agences"), mini(nb(s.actuel), "En stock"), mini(eur(s.valeur), "Montant restant")),
+      h("div", null, h("h2", { style: "margin-bottom:8px" }, "Commandes des agences (" + comptees.length + ")"),
+        lignes.length ? table(["Date", "N°", "Agence", ">Qté", ">PU HT", ">Total HT", "État"], lignes.map(({ c, l }) => h("tr", { class: "clic", title: "Ouvrir la commande", style: c.etat === "Annulée" ? "opacity:.55" : "", onclick: () => pCommande(c) },
+          h("td", { style: "white-space:nowrap" }, c.date ? dateFr(c.date) : h("span", { class: "muted" }, triFr(c._tri))), h("td", null, c.numero, l.libelle && l.libelle !== a.nom ? h("span", { class: "sub" }, l.libelle) : null), h("td", null, c.agence || c.ville || "—", c.factureA ? h("span", { class: "sub" }, c.factureA) : null),
+          h("td", { class: "r" }, nb(l.quantite)), h("td", { class: "r" }, eur(l.puht)), h("td", { class: "r" }, eur(l.totalHT)), h("td", null, etatEl(c.etat)))),
+          h("tr", null, h("td", { colSpan: 3 }, "Total hors commandes annulées"), h("td", { class: "r" }, nb(comptees.reduce((t, x) => t + (x.l.quantite || 0), 0))), h("td"), h("td", { class: "r" }, eur(comptees.reduce((t, x) => t + (x.l.totalHT || 0), 0))), h("td")))
+          : h("p", { class: "muted", style: "margin:0" }, "Aucune commande pour cet article.")),
+      h("div", null, h("h2", { style: "margin-bottom:8px" }, "Achats du siège (" + achats.length + ")"),
+        achats.length ? table(["Date", "Devis", ">Qté", ">PU HT", ">Total HT"], achats.map(x => h("tr", null, h("td", { style: "white-space:nowrap" }, dateFr(x.date)), h("td", null, x.devis || "—"), h("td", { class: "r" }, nb(x.quantite)), h("td", { class: "r" }, eur(x.puht)), h("td", { class: "r" }, eur(x.totalHT)))),
+          h("tr", null, h("td", { colSpan: 2 }, "Total"), h("td", { class: "r" }, nb(s.achete)), h("td"), h("td", { class: "r" }, eur(s.valAchat))))
+          : h("p", { class: "muted", style: "margin:0" }, "Aucun achat du siège enregistré : le stock de cet article part de zéro.")),
+    ], [["Compter le stock", () => pInventaire(s)], ["Modifier la fiche", () => pArticle(a)]]);
   }
   function pInventaire(s) {
     const d = h("input", { type: "date", value: auj() }), q = h("input", { inputMode: "decimal", value: String(Math.max(s.actuel, 0)) });
@@ -678,10 +722,10 @@ body.verrou .wrap { display: none; }
       onchange: async e => { const v = e.target.checked; if (await sauver("articles", { ...a, [k]: v }, a.nom + " : " + (k === "enStock" ? (v ? "suivi en stock" : "retiré du stock") : (v ? "à rétrocéder" : "non rétrocédé")) + ".")) render(); else e.target.checked = !v; } });
     const arts = [...db.articles].sort((a, b) => a.categorie.localeCompare(b.categorie, "fr") || a.nom.localeCompare(b.nom, "fr"));
     return [
-      h("div", { class: "toolbar" }, h("span", { class: "muted", style: "font-size:13px" }, "Les articles cochés « en stock » sont suivis ; ceux cochés « à rétrocéder » entrent dans la rétrocession. Les prix viennent du catalogue WooCommerce du nouveau site."), h("span", { class: "spacer" }),
+      h("div", { class: "toolbar" }, h("span", { class: "muted", style: "font-size:13px" }, "Les articles cochés « en stock » sont suivis ; ceux cochés « à rétrocéder » entrent dans la rétrocession. Les prix et les photos viennent du catalogue WooCommerce du nouveau site ; pour un article qui n'y est pas, ajoutez la photo avec « Modifier »."), h("span", { class: "spacer" }),
         h("button", { class: "btn primary", onclick: () => pArticle(null) }, "+ Article")),
       table(["Article", "Catégorie", "En stock", "À rétrocéder", ">Prix de vente HT", ">PU achat siège", "Nouveau site", ""], arts.map(a => { const s = C.stock.find(x => x.a.id === a.id);
-        return h("tr", null, h("td", null, a.nom), h("td", null, a.categorie), h("td", null, bascule(a, "enStock")), h("td", null, bascule(a, "aRetroceder")),
+        return h("tr", null, h("td", null, h("div", { class: "art" }, vignette(a, 52), h("span", null, a.nom))), h("td", null, a.categorie), h("td", null, bascule(a, "enStock")), h("td", null, bascule(a, "aRetroceder")),
           h("td", { class: "r" }, a.prixActuel ? eur(a.prixActuel) : h("span", { class: "muted" }, "—")), h("td", { class: "r" }, s && s.pmp ? eur(s.pmp) : h("span", { class: "muted" }, "—")),
           h("td", null, (a.woo || []).length ? (a.woo || []).map(w => h("a", { href: w.lien, target: "_blank", rel: "noopener", style: "color:inherit;display:block" }, w.nom)) : h("span", { class: "tag" }, "absent")),
           h("td", { class: "r" }, h("button", { class: "btn small", onclick: () => pArticle(a) }, "Modifier"))); })),
@@ -690,7 +734,15 @@ body.verrou .wrap { display: none; }
   function pArticle(a) {
     const d = a ? { ...a } : { id: "", nom: "", categorie: "", enStock: true, aRetroceder: true, prixActuel: null, woo: [], surNouveauSite: false };
     const i = (k, props) => h("input", { value: d[k] ?? "", oninput: e => d[k] = e.target.value, ...props });
-    panneau(a ? a.nom : "Nouvel article", [h("div", { class: "fields" },
+    const photo = h("div", { class: "art", style: "gap:16px" });
+    const fichier = h("input", { type: "file", accept: "image/*", hidden: true, "aria-label": "Photo de l'article", onchange: async e => { const f = e.target.files[0]; if (!f) return;
+      try { d.image = await reduire(f); majPhoto(); } catch (_) { toast("Cette image n'est pas lisible. Essayez un fichier JPG ou PNG."); } e.target.value = ""; } });
+    const majPhoto = () => photo.replaceChildren(vignette(d, 110), h("div", { style: "display:grid;gap:8px" },
+      h("div", { class: "toolbar" }, h("button", { class: "btn small", type: "button", onclick: () => fichier.click() }, d.image ? "Changer la photo" : "Ajouter une photo"),
+        d.image ? h("button", { class: "btn small", type: "button", onclick: () => { d.image = ""; majPhoto(); } }, "Retirer la photo") : null),
+      h("span", { class: "muted", style: "font-size:12.5px" }, "Fichier JPG ou PNG depuis votre ordinateur. L'image est réduite automatiquement.")));
+    majPhoto();
+    panneau(a ? a.nom : "Nouvel article", [h("div", { class: "field" }, h("label", null, "Photo"), fichier, photo), h("div", { class: "fields" },
       h("div", { class: "field full" }, h("label", null, "Nom"), i("nom")), champ("Catégorie", i("categorie", { list: "dl-cat" })), champ("Prix de vente unitaire HT (€)", i("prixActuel", { inputMode: "decimal" })),
       h("datalist", { id: "dl-cat" }, [...new Set(db.articles.map(x => x.categorie))].map(v => h("option", { value: v }))))],
       [["Enregistrer", async () => { if (!String(d.nom).trim()) return toast("Indiquez le nom de l'article.");
@@ -773,9 +825,15 @@ body.verrou .wrap { display: none; }
     let d; try { d = JSON.parse(await f.text()); } catch (_) { return toast("Ce fichier n'est pas lisible."); }
     if (!String(d.format || "").startsWith("stock-john-taylor/")) return toast("Ce fichier n'est pas un fichier de données Stock John Taylor.");
     const cols = COLS.filter(c => Array.isArray(d[c]) && d[c].length);
-    if (!confirm("Importer " + cols.map(c => d[c].length + " " + c).join(", ") + " ?\nLes fiches déjà présentes avec le même identifiant seront remplacées.")) return;
+    // Fichier « fusion » : complète les fiches existantes (ex. photos du catalogue) sans remplacer le reste ni créer de fiche.
+    const fusion = d.fusion === true;
+    const fiches = c => { const l = d[c].filter(x => x && x.id).map(nettoyer); if (!fusion) return l;
+      return l.filter(x => db[c].some(y => y.id === x.id)).map(x => { const y = nettoyer(db[c].find(z => z.id === x.id)), r = { ...y, ...x };
+        if (String(y.image || "").startsWith("data:")) r.image = y.image; return r; }); };
+    if (!confirm(fusion ? "Compléter " + cols.map(c => fiches(c).length + " " + c).join(", ") + " ?\nSeules les informations du fichier sont ajoutées aux fiches existantes. Une photo ajoutée à la main est conservée."
+      : "Importer " + cols.map(c => d[c].length + " " + c).join(", ") + " ?\nLes fiches déjà présentes avec le même identifiant seront remplacées.")) return;
     try { await sauvegardeAvant("Avant import");
-      for (const c of cols) { toast("Import des " + c + "…"); await store.bulk(c, d[c].filter(x => x && x.id).map(nettoyer)); }
+      for (const c of cols) { toast("Import des " + c + "…"); await store.bulk(c, fiches(c)); }
       modifie({ col: "", action: "Import", libelle: cols.map(c => d[c].length + " " + c).join(", ") + " (" + f.name + ")" });
       toast("Import terminé."); go("synthese"); }
     catch (e) { console.error(e); toast(e.code === "permission-denied" ? "Import refusé : les règles d'accès Firebase ne sont pas en place." : "Import interrompu (" + (e.code || e.message) + ")."); render(); }
