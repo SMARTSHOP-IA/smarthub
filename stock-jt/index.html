@@ -451,7 +451,13 @@ body.verrou .wrap { display: none; }
       if (c.etat === "À régler" && age != null && age > JOURS_PAIEMENT) add("Facture non payée", false, nom + " (" + eur(c._total) + ") : facture " + (c.facture || "") + " à régler depuis " + age + " jours.", cible);
       if (c.etat !== "À facturer" && c.etat !== "Inconnu" && !c.facture && !c.factureNum && !c.retroExclue) add("Numéro de facture manquant", false, nom + " est marquée « " + c.etat + " » sans numéro de facture.", cible);
       if (c.sellsyDetail && c.sellsyDetail.remise && !c.remiseSmartform) add("Prix remisé à confirmer", false, nom + " : la facture " + (c.sellsyDetail.facture || "") + " applique une remise sur " + c.sellsyDetail.lignes.filter(l => l.remise).map(l => l.libelle + " (" + eur(l.puht) + (l.prixAffiche ? " au lieu de " + eur(l.prixAffiche) : "") + ")").join(", ") + ". Cochez « Remise Smartform » dans la commande si c'est normal.", cible);
-      if (c.sellsyDetail) {
+      if (c.sellsyDetail && c.sellsyDetail.type === "produits") {
+        // Facture d'une seule commande : comparaison article par article sur le total (une facture peut compter en lots).
+        const parArt = (ls, m = new Map()) => { for (const l of ls || []) if (l.articleId) m.set(l.articleId, (m.get(l.articleId) || 0) + (l.totalHT != null ? l.totalHT : l.quantite * l.puht)); return m; };
+        const fa = parArt(c.sellsyDetail.lignes), ou = parArt(c.lignes), ecarts = [];
+        for (const [id, t] of fa) { const n = C.art.get(id)?.nom || id; if (!ou.has(id)) ecarts.push(n + " absent de la commande (" + eur(t) + " sur la facture)"); else if (Math.abs(ou.get(id) - t) > 0.02) ecarts.push(n + " : " + eur(ou.get(id)) + " dans l'outil, " + eur(t) + " sur la facture"); }
+        if (ecarts.length) add("Écart avec la facture Sellsy", true, nom + ", facture " + (c.sellsyDetail.facture || "") + " : " + ecarts.join(" ; ") + ".", cible);
+      } else if (c.sellsyDetail) {
         const sd = c.sellsyDetail, simple = t => String(t || "").normalize("NFD").replace(/[^a-zA-Z0-9]+/g, "").toLowerCase();
         const qF = (sd.lignes || []).map(l => l.quantite).filter(q => q != null).sort((a, b) => a - b), qO = (c.lignes || []).map(l => Number(l.quantite) || 0).filter(q => q).sort((a, b) => a - b);
         const reste = qF.slice(), absentes = qO.filter(q => { const i = reste.indexOf(q); if (i < 0) return true; reste.splice(i, 1); return false; });
@@ -461,7 +467,7 @@ body.verrou .wrap { display: none; }
         if (aF && aO && !aF.includes(aO) && !aO.includes(aF)) add("Agence différente sur la facture", false, nom + " : « " + c.agence + " » dans l'outil, « " + sd.agence + " » sur la facture " + (sd.facture || "") + ".", cible);
       }
       if (c.importAuto && c.monday && c.monday.present === false && (age == null || age >= 1)) add("Commande absente de Monday", false, nom + " vient du nouveau site mais n'a pas été trouvée sur les tableaux Monday John Taylor.", cible);
-      if ((c.importAuto || c.sellsyDetail) && c.sellsyMontantHT != null && !c.lignesHorsCatalogue && Math.abs(c.sellsyMontantHT - c._total) > 0.01) add("Écart avec la facture Sellsy", true, nom + " : " + eur(c._total) + " de produits dans l'outil, " + eur(c.sellsyMontantHT) + " hors port sur la facture " + (c.facture || "") + ".", cible);
+      if ((c.importAuto || c.sellsyDetail) && c.sellsyDetail?.type !== "produits" && c.sellsyMontantHT != null && !c.lignesHorsCatalogue && Math.abs(c.sellsyMontantHT - c._total) > 0.01) add("Écart avec la facture Sellsy", true, nom + " : " + eur(c._total) + " de produits dans l'outil, " + eur(c.sellsyMontantHT) + " hors port sur la facture " + (c.facture || "") + ".", cible);
       if (c.ecartSite) add("Écart site / facture", false, nom + " : " + eur(c.ecartSite.site) + " sur le site, " + eur(c.ecartSite.facture) + " facturés. Les lignes suivent la facture.", cible);
     }
     for (const s of C.stock) {
@@ -700,6 +706,15 @@ body.verrou .wrap { display: none; }
       h("optgroup", { label: "Entités facturées" }, ents.map(e => h("option", { value: e }, e))),
       h("optgroup", { label: "Choisir par agence" }, parAgence.map(e => h("option", { value: e.entite || e.agence }, e.agence + (e.entite ? " : " + e.entite : "")))));
     factureA.value = d.factureA || "";
+    // Recherche dans la liste : ne garde que les entités et agences qui contiennent le texte saisi.
+    const toutesOptions = [...factureA.querySelectorAll("optgroup")].map(g => [g, [...g.children]]);
+    const chercheFact = h("input", { type: "search", placeholder: "Rechercher une entité ou une agence…", "aria-label": "Rechercher dans Facturé à", oninput: e => {
+      const q = slug(e.target.value); let visibles = [];
+      for (const [g, opts] of toutesOptions) { const garde = opts.filter(o => !q || slug(o.textContent).includes(q)); g.replaceChildren(...garde); g.hidden = !garde.length; visibles = visibles.concat(garde); }
+      const valeurs = [...new Set(visibles.map(o => o.value))];
+      if (q && valeurs.length === 1) { factureA.value = valeurs[0]; d.factureA = valeurs[0]; } else factureA.value = d.factureA || "";
+    } });
+    const blocFact = h("div", { style: "display:grid;gap:6px" }, chercheFact, factureA);
     const agence = i("agence", { list: "dl-agences", placeholder: "Agence", onchange: e => { const en = db.entites.find(x => x.agence === e.target.value); if (en && en.entite && !d.factureA) { d.factureA = en.entite; factureA.value = en.entite; } } });
     const liens = c && (c.sellsyFactureId || c.sellsyDevisId) ? h("div", { class: "field full", style: "display:flex;gap:18px;flex-wrap:wrap" },
       c.sellsyFactureId ? lienSellsy("facture", c.sellsyFactureId, "Ouvrir la facture " + (c.facture || c.factureNum || "") + " dans Sellsy") : null,
@@ -724,14 +739,14 @@ body.verrou .wrap { display: none; }
     panneau(neuf ? "Nouvelle commande manuelle" : "Commande " + c.numero, [
       c?.importAuto ? h("div", { class: "banner" }, "Commande reprise automatiquement du nouveau site" + (c.lignesHorsCatalogue ? " (" + c.lignesHorsCatalogue + " ligne(s) hors catalogue non reprise(s))" : "") + (c.factureMensuelle ? ". Agence affiliée : la commande sera reprise sur la facture mensuelle de JOHN TAYLOR SA, qui est recherchée toutes les heures (lien Monday ou objet de la facture)." : ". La facture Sellsy et son état sont mis à jour toutes les heures tant qu'elle n'est pas réglée.")
         + (c.monday ? (c.monday.present ? " Présente sur Monday." : " Non trouvée sur Monday.") : "")) : null,
-      c?.sellsyDetail ? h("div", { class: "banner" }, "Sur la facture Sellsy " + (c.sellsyDetail.facture || "") + (c.sellsyDetail.agence ? " (agence " + c.sellsyDetail.agence + ")" : "") + " : " + (c.sellsyDetail.lignes || []).map(l => l.libelle + (l.quantite != null ? " x " + l.quantite : "")).join(", ") + (c.sellsyMontantHT != null ? ", soit " + eur(c.sellsyMontantHT) + " hors port." : ".")) : null,
+      c?.sellsyDetail ? h("div", { class: "banner" }, "Sur la facture Sellsy " + (c.sellsyDetail.facture || "") + (c.sellsyDetail.agence ? " (agence " + c.sellsyDetail.agence + ")" : "") + " : " + (c.sellsyDetail.lignes || []).map(l => l.libelle + (l.quantite != null ? " x " + l.quantite : "") + (l.puht != null ? " à " + eur(l.puht) : "")).join(", ") + (c.sellsyDetail.type !== "produits" && c.sellsyMontantHT != null ? ", soit " + eur(c.sellsyMontantHT) + " hors port." : ".")) : null,
       c?.ecartSite ? h("div", { class: "banner" }, "Le site indiquait " + eur(c.ecartSite.site) + " et la facture " + eur(c.ecartSite.facture) + " : les lignes ont été ajustées sur la facture.") : null,
       c?.montantsEstimes ? h("div", { class: "banner" }, "Commande reprise du tableau de gestion : le total est celui de la facture, mais sa répartition par ligne est estimée. Corrigez les lignes si besoin.") : null,
       h("div", { class: "fields" },
         champ(neuf ? "N° de devis Sellsy ou de commande" : "N° de commande", i("numero", { placeholder: "ex. D-16671", disabled: !neuf && d.source !== "Hors site" })),
         champ("Origine", s("source", SOURCES)),
         champ("Date", i("date", { type: "date" })), champ("Trimestre (si pas de date)", i("trimestre", { placeholder: "ex. 2026-T4" })),
-        champ("Agence", agence), champ("Facturé à", factureA),
+        champ("Agence", agence), champ("Facturé à", blocFact),
         champ("N° de facture Sellsy", i("facture", { placeholder: "ex. F-20261124-27026" })), champ("État de la facture", s("etat", ETATS)), liens,
         h("label", { class: "check field full" }, excl, "Ne pas compter dans la rétrocession (ex. convention offerte par le siège)"),
         h("label", { class: "check field full" }, h("input", { type: "checkbox", checked: !!d.remiseSmartform, onchange: e => d.remiseSmartform = e.target.checked }), "Remise Smartform (prix remisés accordés par JT SA : l'écart avec le prix habituel est normal)"),
