@@ -600,7 +600,7 @@ body.verrou .wrap { display: none; }
     ];
   }
   function tStock(rows, vue) {
-    const nom = s => h("td", null, h("div", { class: "art" }, vignette(s.a, 36), h("div", null, s.a.nom, h("span", { class: "sub" }, s.a.categorie + (s.a.surNouveauSite ? "" : " · absent du nouveau site")))));
+    const nom = s => h("td", null, h("div", { class: "art" }, vignette(s.a, 36), h("div", null, s.a.nom, h("span", { class: "sub" }, s.a.categorie + (enLigne(s.a) ? "" : " · hors ligne")))));
     const tr = (s, ...c) => h("tr", { class: "clic", title: "Voir les achats et les commandes de cet article", onclick: () => pProduit(s) }, nom(s), ...c);
     const qte = (s, v) => h("td", { class: "r " + (v < 0 ? "neg" : s.achete && v <= s.achete * SEUIL_BAS ? "bas" : "") }, h("b", null, nb(v)));
     const compter = s => h("td", { class: "r" }, h("button", { class: "btn small", onclick: e => { e.stopPropagation(); pInventaire(s); } }, "Compter"));
@@ -633,7 +633,7 @@ body.verrou .wrap { display: none; }
     const mini = (v, l) => h("div", { class: "stat", style: "padding:10px 12px" }, h("span", { class: "v", style: "font-size:19px" }, v), h("span", { class: "l" }, l));
     panneau(a.nom, [
       h("div", { class: "art", style: "gap:16px;align-items:flex-start" }, vignette(a, 110), h("div", { style: "display:grid;gap:4px" },
-        h("span", { class: "muted" }, a.categorie + (a.surNouveauSite ? "" : " · absent du nouveau site")),
+        h("span", { class: "muted" }, a.categorie + (enLigne(a) ? "" : " · hors ligne")),
         h("span", null, "Prix de vente HT : ", h("b", null, a.prixActuel ? eur(a.prixActuel) : "non renseigné")),
         h("span", null, "Prix d'achat moyen du siège : ", h("b", null, s.pmp ? eur(s.pmp) : "aucun achat enregistré")),
         s.inv ? h("span", { class: "muted" }, "Dernier comptage : " + nb(s.inv.quantite) + " le " + dateFr(s.inv.date)) : null)),
@@ -863,18 +863,21 @@ body.verrou .wrap { display: none; }
         if (await sauver("achats", d)) { fermer(); render(); } }, "primary"]]);
   }
 
+  // En ligne ou hors ligne : la case du catalogue ; tant qu'elle n'a pas été touchée, la présence relevée sur le nouveau site.
+  const enLigne = a => a.enLigne != null ? !!a.enLigne : !!a.surNouveauSite;
   function vCatalogue() {
-    const bascule = (a, k) => h("input", { type: "checkbox", checked: !!a[k], "aria-label": k === "enStock" ? "En stock" : "À rétrocéder", style: "width:18px;height:18px;accent-color:var(--magenta)",
-      onchange: async e => { const v = e.target.checked; if (await sauver("articles", { ...a, [k]: v }, a.nom + " : " + (k === "enStock" ? (v ? "suivi en stock" : "retiré du stock") : (v ? "à rétrocéder" : "non rétrocédé")) + ".")) render(); else e.target.checked = !v; } });
+    const LIB = { enStock: ["En stock", "suivi en stock", "retiré du stock"], aRetroceder: ["À rétrocéder", "à rétrocéder", "non rétrocédé"], enLigne: ["En ligne", "en ligne sur le site", "hors ligne"] };
+    const bascule = (a, k) => h("input", { type: "checkbox", checked: k === "enLigne" ? enLigne(a) : !!a[k], "aria-label": LIB[k][0], style: "width:18px;height:18px;accent-color:var(--magenta)",
+      onchange: async e => { const v = e.target.checked; if (await sauver("articles", { ...a, [k]: v }, a.nom + " : " + LIB[k][v ? 1 : 2] + ".")) render(); else e.target.checked = !v; } });
     const arts = [...db.articles].sort((a, b) => a.categorie.localeCompare(b.categorie, "fr") || a.nom.localeCompare(b.nom, "fr"));
     return [
-      h("div", { class: "toolbar" }, h("span", { class: "muted", style: "font-size:13px" }, "Les articles cochés « en stock » sont suivis ; ceux cochés « à rétrocéder » entrent dans la rétrocession. Le stock restant est calculé par l'outil : achats du siège moins commandes des agences. La colonne « Stock WooCommerce » le compare au stock déclaré sur le site lors du dernier relevé. Les prix et les photos viennent du catalogue WooCommerce du nouveau site ; pour un article qui n'y est pas, ajoutez la photo avec « Modifier »."), h("span", { class: "spacer" }),
+      h("div", { class: "toolbar" }, h("span", { class: "muted", style: "font-size:13px" }, "Les articles cochés « en stock » sont suivis ; ceux cochés « à rétrocéder » entrent dans la rétrocession ; « en ligne » indique si le produit est encore proposé sur le site. Le stock restant est calculé par l'outil : achats du siège moins commandes des agences. La colonne « Stock WooCommerce » le compare au stock déclaré sur le site lors du dernier relevé. Les prix et les photos viennent du catalogue WooCommerce du nouveau site ; pour un article qui n'y est pas, ajoutez la photo avec « Modifier »."), h("span", { class: "spacer" }),
         h("button", { class: "btn primary", onclick: () => pArticle(null) }, "+ Article")),
-      h("div", { class: "compact" }, table(["Article", "En\nstock", "À rétro-\ncéder", ">Stock\nrestant", ">Stock\nWooCommerce", ">Prix de\nvente HT", ">PU achat\nsiège", "Nouveau\nsite", ""], arts.map(a => { const s = C.stock.find(x => x.a.id === a.id), w = a.stockWoo;
+      h("div", { class: "compact" }, table(["Article", "En\nstock", "À rétro-\ncéder", "En\nligne", ">Stock\nrestant", ">Stock\nWooCommerce", ">Prix de\nvente HT", ">PU achat\nsiège", "Nouveau\nsite", ""], arts.map(a => { const s = C.stock.find(x => x.a.id === a.id), w = a.stockWoo;
         const ecart = s && w && (w.suivi ? w.quantite !== s.actuel : (w.etat === "instock" ? s.actuel <= 0 : s.actuel > 0));
         const celWoo = !w ? h("span", { class: "muted" }, "—") : w.suivi ? [h("span", { class: ecart ? "neg" : "" }, nb(w.quantite)), h("span", { class: "sub" }, ecart ? "écart de " + nb(w.quantite - s.actuel) : "identique")]
           : [h("span", { class: "tag" }, "non suivi"), h("span", { class: "sub", style: ecart ? "color:var(--magenta)" : "" }, w.etat === "outofstock" ? "en rupture" : "en vente")];
-        return h("tr", null, h("td", null, h("div", { class: "art" }, vignette(a, 44), h("div", null, a.nom, h("span", { class: "sub" }, a.categorie)))), h("td", null, bascule(a, "enStock")), h("td", null, bascule(a, "aRetroceder")),
+        return h("tr", null, h("td", null, h("div", { class: "art" }, vignette(a, 44), h("div", null, a.nom, h("span", { class: "sub" }, a.categorie)))), h("td", null, bascule(a, "enStock")), h("td", null, bascule(a, "aRetroceder")), h("td", null, bascule(a, "enLigne")),
           h("td", { class: "r " + (s && s.actuel < 0 ? "neg" : "") }, s ? h("b", null, nb(s.actuel)) : h("span", { class: "muted" }, "—")), h("td", { class: "r", title: w && w.le ? "Relevé du " + dateFr(w.le) : "" }, celWoo),
           h("td", { class: "r" }, a.prixActuel ? eur(a.prixActuel) : h("span", { class: "muted" }, "—")), h("td", { class: "r" }, s && s.pmp ? eur(s.pmp) : h("span", { class: "muted" }, "—")),
           h("td", null, (a.woo || []).length ? (a.woo || []).map((w, n, l) => h("a", { href: w.lien, target: "_blank", rel: "noopener", title: w.nom, style: "color:inherit;display:block;white-space:nowrap" }, l.length > 1 ? "voir " + (n + 1) : "voir")) : h("span", { class: "tag" }, "absent")),
