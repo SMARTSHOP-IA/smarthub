@@ -450,6 +450,7 @@ body.verrou .wrap { display: none; }
       if (c.etat === "À facturer" && (age == null || age > (c.factureMensuelle ? JOURS_FACTURE_MENSUELLE : JOURS_FACTURE))) add("Commande non facturée", true, nom + " (" + eur(c._total) + ") n'est pas facturée" + (age != null ? " depuis " + age + " jours." : "."), cible);
       if (c.etat === "À régler" && age != null && age > JOURS_PAIEMENT) add("Facture non payée", false, nom + " (" + eur(c._total) + ") : facture " + (c.facture || "") + " à régler depuis " + age + " jours.", cible);
       if (c.etat !== "À facturer" && c.etat !== "Inconnu" && !c.facture && !c.factureNum && !c.retroExclue) add("Numéro de facture manquant", false, nom + " est marquée « " + c.etat + " » sans numéro de facture.", cible);
+      if (c.sellsyDetail && c.sellsyDetail.remise && !c.remiseSmartform) add("Prix remisé à confirmer", false, nom + " : la facture " + (c.sellsyDetail.facture || "") + " applique une remise sur " + c.sellsyDetail.lignes.filter(l => l.remise).map(l => l.libelle + " (" + eur(l.puht) + (l.prixAffiche ? " au lieu de " + eur(l.prixAffiche) : "") + ")").join(", ") + ". Cochez « Remise Smartform » dans la commande si c'est normal.", cible);
       if (c.sellsyDetail) {
         const sd = c.sellsyDetail, simple = t => String(t || "").normalize("NFD").replace(/[^a-zA-Z0-9]+/g, "").toLowerCase();
         const qF = (sd.lignes || []).map(l => l.quantite).filter(q => q != null).sort((a, b) => a - b), qO = (c.lignes || []).map(l => Number(l.quantite) || 0).filter(q => q).sort((a, b) => a - b);
@@ -677,7 +678,7 @@ body.verrou .wrap { display: none; }
         h("tr", { class: "clic", onclick: () => pCommande(c) },
           h("td", null, lienSellsy("devis", c.sellsyDevisId, c.numero), h("span", { class: "sub" }, c.source)), h("td", null, dateFr(c.date), h("span", { class: "sub" }, triFr(c._tri))),
           h("td", null, c.agence || c.ville || "—", h("span", { class: "sub" }, c.factureA || "")),
-          h("td", null, (c.lignes || []).length + " ligne" + ((c.lignes || []).length > 1 ? "s" : ""), c._sansArticle ? h("span", { class: "sub neg" }, c._sansArticle + " à identifier") : null),
+          h("td", null, (c.lignes || []).length + " ligne" + ((c.lignes || []).length > 1 ? "s" : ""), c._sansArticle ? h("span", { class: "sub neg" }, c._sansArticle + " à identifier") : null, c.remiseSmartform ? h("span", { class: "sub" }, "Remise Smartform") : null),
           h("td", null, lienFacture(c)), h("td", null, etatEl(c.etat)),
           h("td", { class: "r" }, eur(c._total)), h("td", { class: "r" }, c.retroExclue ? h("span", { class: "tag" }, "exclue") : eur(c._retro)))),
         h("tr", null, h("td", { colSpan: 6 }, rows.length + " commandes" + (rows.length > 400 ? " (400 affichées, affinez le filtre)" : "")), h("td", { class: "r" }, eur(tot)), h("td", { class: "r" }, eur(totR))))
@@ -733,6 +734,7 @@ body.verrou .wrap { display: none; }
         champ("Agence", agence), champ("Facturé à", factureA),
         champ("N° de facture Sellsy", i("facture", { placeholder: "ex. F-20261124-27026" })), champ("État de la facture", s("etat", ETATS)), liens,
         h("label", { class: "check field full" }, excl, "Ne pas compter dans la rétrocession (ex. convention offerte par le siège)"),
+        h("label", { class: "check field full" }, h("input", { type: "checkbox", checked: !!d.remiseSmartform, onchange: e => d.remiseSmartform = e.target.checked }), "Remise Smartform (prix remisés accordés par JT SA : l'écart avec le prix habituel est normal)"),
         h("div", { class: "field full" }, h("label", null, "Note"), h("textarea", { value: d.note || "", oninput: e => d.note = e.target.value }))),
       h("div", null, h("h2", { style: "margin-bottom:8px" }, "Produits (hors frais de port)"),
         h("div", { class: "scroll" }, h("table", { class: "lignes" }, h("thead", null, h("tr", null, ["Article", "Quantité", "PU HT", "Total HT", ""].map(t => h("th", null, t)))), tbody,
