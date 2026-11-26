@@ -433,7 +433,8 @@ body.verrou .wrap { display: none; }
         const sd = c.sellsyDetail, simple = t => String(t || "").normalize("NFD").replace(/[^a-zA-Z0-9]+/g, "").toLowerCase();
         const qF = (sd.lignes || []).map(l => l.quantite).filter(q => q != null).sort((a, b) => a - b), qO = (c.lignes || []).map(l => Number(l.quantite) || 0).filter(q => q).sort((a, b) => a - b);
         const reste = qF.slice(), absentes = qO.filter(q => { const i = reste.indexOf(q); if (i < 0) return true; reste.splice(i, 1); return false; });
-        if (qF.length && qF.length === sd.lignes.length && absentes.length) add("Quantités différentes de la facture", true, nom + " : la facture " + (sd.facture || "") + " indique " + (sd.lignes || []).map(l => l.libelle + " x " + l.quantite).join(", ") + ".", cible);
+        // La facture peut compter en lots (5 lots de 10 stylos) : si le total concorde, les quantités de l'outil, en unités, font foi.
+        if (qF.length && qF.length === sd.lignes.length && absentes.length && c.sellsyMontantHT != null && Math.abs(c.sellsyMontantHT - c._total) > 0.01) add("Quantités différentes de la facture", true, nom + " : la facture " + (sd.facture || "") + " indique " + (sd.lignes || []).map(l => l.libelle + " x " + l.quantite).join(", ") + ".", cible);
         const aF = simple(sd.agence), aO = simple(c.agence);
         if (aF && aO && !aF.includes(aO) && !aO.includes(aF)) add("Agence différente sur la facture", false, nom + " : « " + c.agence + " » dans l'outil, « " + sd.agence + " » sur la facture " + (sd.facture || "") + ".", cible);
       }

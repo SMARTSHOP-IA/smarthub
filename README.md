@@ -114,3 +114,5 @@ Factures détaillées par commande : quand une ligne de facture Sellsy porte en 
 (facture mensuelle de JOHN TAYLOR SA), la tâche horaire reporte sur la commande `sellsyMontantHT` (total de la ligne,
 hors port) et `sellsyDetail` (`agence` du titre de section, `lignes` produits et quantités, `facture`). L'onglet
 Contrôles compare alors le montant, les quantités et l'agence ; les lignes de la commande ne sont jamais modifiées.
+Les quantités de l'outil sont toujours en unités de produit, alors qu'une facture peut compter en lots : l'écart de
+quantités n'est signalé que si le montant diffère aussi.
