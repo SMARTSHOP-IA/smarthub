@@ -124,3 +124,4 @@ et consommés du plus ancien au plus récent par les commandes des agences. Quan
 a été acheté à un autre prix, différent du prix de vente actuel, l'onglet Contrôles affiche « Prix d'achat changé » jusqu'à ce que le bouton « Prix de
 vente vérifié » de la fiche produit soit utilisé (champ `prixRevuAchat` de l'article). L'onglet Achats du siège
 propose une vue « Par produit ».
+L'alerte de changement de prix s'ouvre aussi en pop-up à l'arrivée sur l'outil et dès qu'un nouveau produit est concerné.
