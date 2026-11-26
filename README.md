@@ -96,3 +96,11 @@ La mise à jour est faite toutes les heures par une tâche programmée, hors de 
 compte technique `claude-stock-jt` (première ligne de la règle `stock_jt`, seul accès de ce compte) et note son
 passage dans `stock_jt/base/etat/sellsy`. Le bouton « Mettre à jour les liens Sellsy » de Réglages y dépose une
 demande, traitée au passage suivant.
+
+### Commandes du nouveau site
+
+La même tâche horaire lit les commandes du site WooCommerce et crée dans `commandes` celles qui contiennent au
+moins un article du catalogue (fiche `site-<numéro>`, `importAuto: true`, lignes d'articles seulement, hors port).
+Elle ne modifie plus les lignes ensuite : elle tient à jour la facture Sellsy (`facture`, `sellsyFactureId`,
+`etat`, `sellsyMontantHT`), la présence sur Monday (`monday.present`) et l'annulation sur le site. L'onglet
+Contrôles signale une commande absente de Monday ou un montant différent de la facture.

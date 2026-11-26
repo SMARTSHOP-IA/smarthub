@@ -429,6 +429,8 @@ body.verrou .wrap { display: none; }
       if (c.etat === "À facturer" && (age == null || age > JOURS_FACTURE)) add("Commande non facturée", true, nom + " (" + eur(c._total) + ") n'est pas facturée" + (age != null ? " depuis " + age + " jours." : "."), cible);
       if (c.etat === "À régler" && age != null && age > JOURS_PAIEMENT) add("Facture non payée", false, nom + " (" + eur(c._total) + ") : facture " + (c.facture || "") + " à régler depuis " + age + " jours.", cible);
       if (c.etat !== "À facturer" && c.etat !== "Inconnu" && !c.facture && !c.factureNum && !c.retroExclue) add("Numéro de facture manquant", false, nom + " est marquée « " + c.etat + " » sans numéro de facture.", cible);
+      if (c.importAuto && c.monday && c.monday.present === false && (age == null || age >= 1)) add("Commande absente de Monday", false, nom + " vient du nouveau site mais n'a pas été trouvée sur les tableaux Monday John Taylor.", cible);
+      if (c.importAuto && c.sellsyMontantHT != null && !c.lignesHorsCatalogue && Math.abs(c.sellsyMontantHT - c._total) > 0.01) add("Écart avec la facture Sellsy", true, nom + " : " + eur(c._total) + " de produits dans l'outil, " + eur(c.sellsyMontantHT) + " hors port sur la facture " + (c.facture || "") + ".", cible);
       if (c.ecartSite) add("Écart site / facture", false, nom + " : " + eur(c.ecartSite.site) + " sur le site, " + eur(c.ecartSite.facture) + " facturés. Les lignes suivent la facture.", cible);
     }
     for (const s of C.stock) {
@@ -667,6 +669,8 @@ body.verrou .wrap { display: none; }
     tbody.append(...d.lignes.map(ligne)); maj();
     const excl = h("input", { type: "checkbox", checked: !!d.retroExclue, onchange: e => d.retroExclue = e.target.checked });
     panneau(neuf ? "Nouvelle commande manuelle" : "Commande " + c.numero, [
+      c?.importAuto ? h("div", { class: "banner" }, "Commande reprise automatiquement du nouveau site" + (c.lignesHorsCatalogue ? " (" + c.lignesHorsCatalogue + " ligne(s) hors catalogue non reprise(s))" : "") + ". La facture Sellsy et son état sont mis à jour toutes les heures tant qu'elle n'est pas réglée."
+        + (c.monday ? (c.monday.present ? " Présente sur Monday." : " Non trouvée sur Monday.") : "")) : null,
       c?.ecartSite ? h("div", { class: "banner" }, "Le site indiquait " + eur(c.ecartSite.site) + " et la facture " + eur(c.ecartSite.facture) + " : les lignes ont été ajustées sur la facture.") : null,
       c?.montantsEstimes ? h("div", { class: "banner" }, "Commande reprise du tableau de gestion : le total est celui de la facture, mais sa répartition par ligne est estimée. Corrigez les lignes si besoin.") : null,
       h("div", { class: "fields" },
@@ -860,16 +864,19 @@ body.verrou .wrap { display: none; }
   async function sellsyDemander() {
     if (LOCAL) return toast("Indisponible en mode essai.");
     try { const d = { demandeLe: new Date().toISOString(), demandePar: state.me.email }; await sellsyRef().set(d, { merge: true });
-      sellsy.etat = { ...(sellsy.etat || {}), ...d }; toast("Demande enregistrée : les liens seront mis à jour au prochain passage."); render(); }
+      sellsy.etat = { ...(sellsy.etat || {}), ...d }; toast("Demande enregistrée : elle sera traitée au prochain passage."); render(); }
     catch (e) { console.error(e); toast("La demande n'a pas pu être enregistrée."); }
   }
   function blocSellsy() {
     const e = sellsy.etat || {}, attente = e.demandeLe && (!e.faitLe || e.demandeLe > e.faitLe);
-    return h("section", { class: "bloc" }, h("h3", null, "Liens Sellsy"),
-      h("p", { class: "muted", style: "margin:0" }, "Les liens vers les factures et les devis Sellsy sont mis à jour automatiquement toutes les heures. ",
+    const st = e.site;
+    return h("section", { class: "bloc" }, h("h3", null, "Mises à jour automatiques"),
+      st ? h("p", { class: "muted", style: "margin:0" }, "Commandes du nouveau site : " + nb(st.suivies || 0) + " reprise(s) dans l'outil, " + nb(st.lues || 0) + " lue(s) sur le site au dernier passage"
+        + (st.sansArticle ? ", dont " + nb(st.sansArticle) + " sans article du catalogue (non reprises)" : "") + ". Seules les lignes d'articles du catalogue sont reprises, hors frais de port.") : null,
+      h("p", { class: "muted", style: "margin:0" }, "Toutes les heures : nouvelles commandes du site, factures Sellsy (numéro, état, montant) et liens vers les factures et les devis. ",
         e.faitLe ? "Dernière mise à jour : " + quand(e.faitLe) + "." : "Aucune mise à jour automatique n'a encore eu lieu.",
         attente ? " Une mise à jour demandée le " + quand(e.demandeLe) + " est en attente." : ""),
-      h("div", { class: "toolbar" }, h("button", { class: "btn", onclick: sellsyDemander }, "Mettre à jour les liens Sellsy"),
+      h("div", { class: "toolbar" }, h("button", { class: "btn", onclick: sellsyDemander }, "Demander une mise à jour"),
         h("button", { class: "btn", onclick: async () => { await sellsyLire(); await charger(); } }, "Recharger les données")));
   }
   function vReglages() {
