@@ -202,7 +202,7 @@ body.verrou .wrap { display: none; }
   const ETAT_C = { "À facturer": "var(--magenta)", "À régler": "var(--warn)", "Réglé": "var(--green)", "Non rétrocédé": "var(--muted)", "Annulée": "var(--muted)", "Inconnu": "var(--cyan)" };
   const SOURCES = ["Nouveau site", "Ancien site", "Hors site"];
   const FACTURE_SUR = ["JT SA (siège)", "Nom propre (filiale)", "John Taylor Corporate (siège Monaco)"];
-  const JOURS_FACTURE = 30, JOURS_PAIEMENT = 45, SEUIL_BAS = 0.1;
+  const JOURS_FACTURE = 30, JOURS_FACTURE_MENSUELLE = 45, JOURS_PAIEMENT = 45, SEUIL_BAS = 0.1;
   // ?local=1 : mode essai, les données restent dans ce navigateur (aucune connexion, rien n'est partagé).
   const LOCAL = new URLSearchParams(location.search).get("local") === "1";
 
@@ -426,7 +426,7 @@ body.verrou .wrap { display: none; }
       if (!c._tri) add("Trimestre manquant", true, nom + " n'a ni date ni trimestre : " + eur(c._retro) + " hors des totaux trimestriels.", cible);
       if (c.etat === "Inconnu") add("État de facture inconnu", false, nom + " (" + eur(c._total) + ") : facture et paiement à renseigner.", cible);
       const age = joursDepuis(c.date);
-      if (c.etat === "À facturer" && (age == null || age > JOURS_FACTURE)) add("Commande non facturée", true, nom + " (" + eur(c._total) + ") n'est pas facturée" + (age != null ? " depuis " + age + " jours." : "."), cible);
+      if (c.etat === "À facturer" && (age == null || age > (c.factureMensuelle ? JOURS_FACTURE_MENSUELLE : JOURS_FACTURE))) add("Commande non facturée", true, nom + " (" + eur(c._total) + ") n'est pas facturée" + (age != null ? " depuis " + age + " jours." : "."), cible);
       if (c.etat === "À régler" && age != null && age > JOURS_PAIEMENT) add("Facture non payée", false, nom + " (" + eur(c._total) + ") : facture " + (c.facture || "") + " à régler depuis " + age + " jours.", cible);
       if (c.etat !== "À facturer" && c.etat !== "Inconnu" && !c.facture && !c.factureNum && !c.retroExclue) add("Numéro de facture manquant", false, nom + " est marquée « " + c.etat + " » sans numéro de facture.", cible);
       if (c.importAuto && c.monday && c.monday.present === false && (age == null || age >= 1)) add("Commande absente de Monday", false, nom + " vient du nouveau site mais n'a pas été trouvée sur les tableaux Monday John Taylor.", cible);
@@ -669,7 +669,7 @@ body.verrou .wrap { display: none; }
     tbody.append(...d.lignes.map(ligne)); maj();
     const excl = h("input", { type: "checkbox", checked: !!d.retroExclue, onchange: e => d.retroExclue = e.target.checked });
     panneau(neuf ? "Nouvelle commande manuelle" : "Commande " + c.numero, [
-      c?.importAuto ? h("div", { class: "banner" }, "Commande reprise automatiquement du nouveau site" + (c.lignesHorsCatalogue ? " (" + c.lignesHorsCatalogue + " ligne(s) hors catalogue non reprise(s))" : "") + ". La facture Sellsy et son état sont mis à jour toutes les heures tant qu'elle n'est pas réglée."
+      c?.importAuto ? h("div", { class: "banner" }, "Commande reprise automatiquement du nouveau site" + (c.lignesHorsCatalogue ? " (" + c.lignesHorsCatalogue + " ligne(s) hors catalogue non reprise(s))" : "") + (c.factureMensuelle ? ". Agence affiliée : la commande sera reprise sur la facture mensuelle de JOHN TAYLOR SA, qui est recherchée toutes les heures (lien Monday ou objet de la facture)." : ". La facture Sellsy et son état sont mis à jour toutes les heures tant qu'elle n'est pas réglée.")
         + (c.monday ? (c.monday.present ? " Présente sur Monday." : " Non trouvée sur Monday.") : "")) : null,
       c?.ecartSite ? h("div", { class: "banner" }, "Le site indiquait " + eur(c.ecartSite.site) + " et la facture " + eur(c.ecartSite.facture) + " : les lignes ont été ajustées sur la facture.") : null,
       c?.montantsEstimes ? h("div", { class: "banner" }, "Commande reprise du tableau de gestion : le total est celui de la facture, mais sa répartition par ligne est estimée. Corrigez les lignes si besoin.") : null,
