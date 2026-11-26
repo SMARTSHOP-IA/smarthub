@@ -852,6 +852,26 @@ body.verrou .wrap { display: none; }
         table(["À vérifier"], lst.map(c => h("tr", { class: "clic", onclick: ouvrir(c) }, h("td", null, c.texte))))))];
   }
 
+  // Liens Sellsy : une tâche programmée (hors de la page) relie chaque heure factures et devis Sellsy aux fiches.
+  // La page ne parle pas à Sellsy : le bouton dépose une demande dans stock_jt/base/etat/sellsy, traitée au passage suivant.
+  const sellsy = { etat: null };
+  const sellsyRef = () => fs.collection("stock_jt").doc("base").collection("etat").doc("sellsy");
+  async function sellsyLire() { if (LOCAL) return; try { sellsy.etat = (await sellsyRef().get()).data() || {}; } catch (e) { console.warn("État Sellsy illisible", e); } }
+  async function sellsyDemander() {
+    if (LOCAL) return toast("Indisponible en mode essai.");
+    try { const d = { demandeLe: new Date().toISOString(), demandePar: state.me.email }; await sellsyRef().set(d, { merge: true });
+      sellsy.etat = { ...(sellsy.etat || {}), ...d }; toast("Demande enregistrée : les liens seront mis à jour au prochain passage."); render(); }
+    catch (e) { console.error(e); toast("La demande n'a pas pu être enregistrée."); }
+  }
+  function blocSellsy() {
+    const e = sellsy.etat || {}, attente = e.demandeLe && (!e.faitLe || e.demandeLe > e.faitLe);
+    return h("section", { class: "bloc" }, h("h3", null, "Liens Sellsy"),
+      h("p", { class: "muted", style: "margin:0" }, "Les liens vers les factures et les devis Sellsy sont mis à jour automatiquement toutes les heures. ",
+        e.faitLe ? "Dernière mise à jour : " + quand(e.faitLe) + "." : "Aucune mise à jour automatique n'a encore eu lieu.",
+        attente ? " Une mise à jour demandée le " + quand(e.demandeLe) + " est en attente." : ""),
+      h("div", { class: "toolbar" }, h("button", { class: "btn", onclick: sellsyDemander }, "Mettre à jour les liens Sellsy"),
+        h("button", { class: "btn", onclick: async () => { await sellsyLire(); await charger(); } }, "Recharger les données")));
+  }
   function vReglages() {
     const fichier = h("input", { type: "file", accept: ".json,application/json", hidden: true, onchange: e => importer(e.target.files[0]) });
     const mail = h("input", { type: "email", placeholder: "prenom.nom@exemple.com", "aria-label": "Adresse e-mail à autoriser", style: "flex:1 1 240px;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px" });
@@ -874,6 +894,7 @@ body.verrou .wrap { display: none; }
           : h("p", { class: "muted", style: "margin:0;font-size:13px" }, "Aucune sauvegarde pour l'instant. La première se crée dès que l'outil contient des données."),
         S.liste.length > 10 ? h("button", { class: "btn small", style: "justify-self:start", onclick: () => { S.tout = !S.tout; render(); } }, S.tout ? "Voir moins" : "Voir les " + S.liste.length + " sauvegardes") : null,
         h("p", { class: "muted", style: "margin:0;font-size:13px" }, "Les " + MAX_AUTO + " dernières sauvegardes automatiques sont conservées ; celles créées à la main ou avant une restauration ne sont jamais effacées.")),
+      blocSellsy(),
       h("section", { class: "bloc" }, h("h3", null, "Historique des modifications"),
         S.journal.length ? table(["Date", "Par", "Modification"], (S.toutJ ? S.journal : S.journal.slice(0, 15)).map(e => h("tr", null,
           h("td", null, quand(e.date)), h("td", null, (e.par || "").split("@")[0]), h("td", null, h("b", null, e.action + " "), e.libelle || ""))))
@@ -941,7 +962,7 @@ match /stock_jt_acces/{email} {
     && request.auth.token.email.lower().matches('.*@smartshop[.]fr$');
 }`;
   async function charger() {
-    try { await store.load(); state.refus = false; $("#notice").replaceChildren(LOCAL ? h("div", { class: "banner" }, h("b", null, "Mode essai. "), "Les données restent dans ce navigateur et ne sont pas partagées.") : ""); }
+    try { await store.load(); await sellsyLire(); state.refus = false; $("#notice").replaceChildren(LOCAL ? h("div", { class: "banner" }, h("b", null, "Mode essai. "), "Les données restent dans ce navigateur et ne sont pas partagées.") : ""); }
     catch (e) {
       console.error("Stock JT", e);
       if (e.code === "permission-denied") { state.refus = true;
